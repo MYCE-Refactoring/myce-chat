@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: domain
+  data: # MongoDB
+    redis:
+      url: ${REDIS_URL}
+      repositories:
+        enabled: false
+  mongodb:
+    uri: ${MONGODB_URI}

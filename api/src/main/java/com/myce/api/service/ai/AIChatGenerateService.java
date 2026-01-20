@@ -2,11 +2,16 @@ package com.myce.api.service.ai;
 
 import com.myce.api.ai.context.PublicContext;
 import com.myce.api.ai.context.UserContext;
+import com.myce.api.dto.message.type.SystemMessage;
 import com.myce.api.service.AIChatContextService;
 import com.myce.api.service.AIChatPromptService;
+import com.myce.common.exception.CustomErrorCode;
+import com.myce.common.exception.CustomException;
 import com.myce.domain.document.ChatMessage;
-import com.myce.api.dto.message.type.SystemMessage;
+import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.MessageSenderType;
+import com.myce.domain.repository.ChatMessageRepository;
+import com.myce.domain.repository.ChatRoomRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,16 +37,20 @@ public class AIChatGenerateService {
     };
 
     private final ChatClient chatClient;
-    private final ChatDataFacade chatDataFacade;
+    private final ChatRoomRepository chatRoomRepository;
     private final AIChatPromptService aiChatPromptService;
     private final AIChatContextService aiChatContextService;
+    private final ChatMessageRepository chatMessageRepository;
 
     public String generateAIResponse(String userMessage, String roomCode) {
         // 1. 채팅방 상태 확인
-        boolean isWaitingForAdmin = chatDataFacade.checkRoomIsWaitingAdmin(roomCode);
+        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
+        boolean isWaitingForAdmin = chatRoom.isWaitingForAdmin();
 
         // 2. 대화 이력 조회
-        List<ChatMessage> recentMessages = chatDataFacade.getRecentMessages(roomCode);
+        List<ChatMessage> recentMessages = chatMessageRepository
+                .findTop50ByRoomCodeOrderBySentAtDesc(roomCode);
 
         // 3. 컨텍스트 수집
         UserContext userContext = aiChatContextService.buildUserContext(roomCode);
@@ -75,7 +84,8 @@ public class AIChatGenerateService {
 
     public String generateConversationSummary(String roomCode) {
         // 전체 대화 이력 조회 (최근 50개)
-        List<ChatMessage> messages = chatDataFacade.getRecentMessages(roomCode);
+        List<ChatMessage> messages = chatMessageRepository
+                .findTop50ByRoomCodeOrderBySentAtDesc(roomCode);
         if (messages.isEmpty()) return SystemMessage.NOT_EXIST_SUMMARY_MESSAGE;
 
         UserContext userContext = aiChatContextService.buildUserContext(roomCode);

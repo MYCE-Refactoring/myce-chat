@@ -16,7 +16,7 @@ internal:
 
 
 scheduler:
-  admin-timeout: 0 */30 * * * * # 1??? (????) -> ??? ??
+  admin-timeout: 0 */30 * * * *
 logging:
   level:
     org.springframework: info

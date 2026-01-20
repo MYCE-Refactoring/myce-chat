@@ -1,0 +1,35 @@
+package com.myce.api.dto.message;
+
+import com.myce.domain.document.type.MessageSenderType;
+import java.time.LocalDateTime;
+import lombok.Getter;
+
+@Getter
+public class ChatPayload {
+    private final String roomCode;
+    private final String messageId;
+    private final Long senderId;
+    private final MessageSenderType senderType;
+    private final String senderName;
+    private final String content;
+    private final LocalDateTime sendAt;
+
+    private String adminCode;
+    private String adminDisplayName;
+
+    public ChatPayload(String roomCode, String messageId, Long senderId, MessageSenderType senderType,
+            String senderName, String content, LocalDateTime sendAt) {
+        this.roomCode = roomCode;
+        this.messageId = messageId;
+        this.senderId = senderId;
+        this.senderType = senderType;
+        this.senderName = senderName;
+        this.content = content;
+        this.sendAt = sendAt;
+    }
+
+    public void addAdminInfo(String adminCode, String adminDisplayName) {
+        this.adminCode = adminCode;
+        this.adminDisplayName = adminDisplayName;
+    }
+}

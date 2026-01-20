@@ -1,0 +1,24 @@
+server:
+  port: 8031
+
+spring:
+  application:
+    name: api
+  config:
+    import:
+      - optional:classpath:application-domain.yml
+      - optional:file:./.env[.properties]
+internal:
+  auth:
+    value: local-gateway
+  core:
+    url: http://localhost:8081
+
+
+scheduler:
+  admin-timeout: 0 */30 * * * * # 1??? (????) -> ??? ??
+logging:
+  level:
+    org.springframework: info
+    com.myce: debug
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG

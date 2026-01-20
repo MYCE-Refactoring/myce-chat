@@ -190,9 +190,18 @@ gradle/
 gradle.lockfile
 *.gradle.local
 
+caches/
+daemon/
+
 # Gemini files
 GEMINI.md
 .prompt
 .prMessage
 
 /docs
+
+# Jansi native libraries
+native/
+
+# Gradle temporary files
+.tmp/

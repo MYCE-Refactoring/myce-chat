@@ -12,8 +12,6 @@ import com.myce.domain.document.ChatRoom;
  */
 public interface AIChatService {
 
-    ChatMessageResponse sendAIMessage(ChatRoom chatRoom, String userMessage);
-
     ChatStatusResponse getAiChatStatus(String roomCode);
 
     void handoffToAdmin(ChatRoom chatRoom, String adminCode);

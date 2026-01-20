@@ -46,21 +46,6 @@ public class AIChatServiceImpl implements AIChatService {
     private final ChatRoomCacheRepository chatCacheRepository;
 
     @Override
-    @Transactional
-    public ChatMessageResponse sendAIMessage(ChatRoom chatRoom, String userMessage) {
-        String roomCode = chatRoom.getRoomCode();
-
-        String aiResponse = chatGenerateService.generateAIResponse(userMessage, roomCode);
-        ChatMessage chatMessage = chatMessageService.saveAIChatMessage(roomCode, aiResponse);
-        chatRoom.updateLastMessageInfo(chatMessage.getId(), chatMessage.getContent());
-
-        // AI가 사용자 메시지를 "읽음" 처리 - 읽음 상태 업데이트 브로드캐스트
-        sendAIReadStatusUpdate(chatRoom);
-
-        return ChatMessageMapper.toResponse(chatMessage);
-    }
-
-    @Override
     public ChatStatusResponse getAiChatStatus(String roomCode) {
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         //TODO 프론트에서 어떻게 쓰이는지 확인하고 enum으로 분리하기

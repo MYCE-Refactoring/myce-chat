@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PlatformRoomService {
 
+    private static final String DEFAULT_PLATFORM_CHAT_ROOM_NAME = "플랫폼 상담";
+
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomCacheRepository chatCacheRepository;
 
@@ -20,6 +22,7 @@ public class PlatformRoomService {
         ChatRoom newRoom = ChatRoom.builder()
                 .roomCode(roomCode)
                 .memberId(memberId)
+                .roomTitle(DEFAULT_PLATFORM_CHAT_ROOM_NAME)
                 .memberName(memberName)
                 .build();
 

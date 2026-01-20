@@ -221,11 +221,11 @@ public class ExpoChatServiceImpl implements ExpoChatService {
                 .memberId(memberId)
                 .memberName(member.getName())
                 .expoId(expoId)
-                .expoTitle(expo.getTitle())
+                .roomTitle(expo.getTitle())
                 .build();
 
         ChatRoom savedRoom = chatRoomRepository.save(newRoom);
-        log.info(" 새 박람회 채팅방 생성 완료 - roomCode: {}, expoTitle: {}", roomCode, expo.getTitle());
+        log.info(" 새 박람회 채팅방 생성 완료 - roomCode: {}, roomTitle: {}", roomCode, newRoom.getRoomTitle());
 
         // 6. AI 환영 메시지 생성 (선택사항 - 필요시 구현)
         // createWelcomeMessage(savedRoom, expo, member);

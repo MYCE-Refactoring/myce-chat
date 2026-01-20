@@ -56,7 +56,7 @@ public class ChatRoom {
     /**
      * 박람회 제목 (캐시용)
      */
-    private String expoTitle;
+    private String roomTitle;
 
     /**
      * 채팅방 활성화 상태
@@ -144,12 +144,12 @@ public class ChatRoom {
      */
     @Builder
     public ChatRoom(String roomCode, Long memberId, String memberName, 
-                   Long expoId, String expoTitle) {
+                   Long expoId, String roomTitle) {
         this.roomCode = roomCode;
         this.memberId = memberId;
         this.memberName = memberName;
         this.expoId = expoId;
-        this.expoTitle = expoTitle;
+        this.roomTitle = roomTitle;
         this.isActive = true;  // 기본값: 활성화
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();

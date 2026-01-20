@@ -94,7 +94,7 @@ public class ChatRoom {
     /**
      * 채팅방 정보 최종 수정 시간
      */
-    @LastModifiedDate  
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
     /**
@@ -136,7 +136,6 @@ public class ChatRoom {
      * 현재 채팅방 상태 (modular state storage)
      * DB에 실제 enum 값 저장하여 상태 관리 효율화
      */
-    @Setter
     @Indexed
     private ChatRoomState currentState;
 

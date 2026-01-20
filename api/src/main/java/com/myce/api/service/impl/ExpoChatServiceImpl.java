@@ -5,8 +5,10 @@ import com.myce.api.dto.ExpoInfo;
 import com.myce.api.dto.MemberInfo;
 import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.api.dto.response.ChatRoomInfoListResponse;
+import com.myce.api.dto.response.ChatRoomInfoResponse;
 import com.myce.api.dto.response.ChatUnreadCountResponse;
 import com.myce.api.mapper.ChatMessageMapper;
+import com.myce.api.mapper.ChatRoomMapper;
 import com.myce.api.service.ChatUnreadService;
 import com.myce.api.service.ExpoChatService;
 import com.myce.api.service.client.ExpoClient;
@@ -25,9 +27,7 @@ import com.myce.domain.repository.ChatMessageRepository;
 import com.myce.domain.repository.ChatRoomCacheRepository;
 import com.myce.domain.repository.ChatRoomRepository;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -190,7 +190,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
 
     @Override
     @Transactional
-    public Map<String, Object> getOrCreateExpoChatRoom(Long expoId, Long memberId) {
+    public ChatRoomInfoResponse getOrCreateExpoChatRoom(Long expoId, Long memberId) {
         log.info("[ExpoChatService] Get or create expo chat room. expoId={}, userId={}", expoId, memberId);
 
         ExpoInfo expo = expoClient.getExpoInfo(expoId);
@@ -200,19 +200,19 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         String roomCode = RoomCodeSupporter.getAdminRoomCode(expoId, memberId);
 
         // 4. 기존 채팅방 조회
-        ChatRoom existingRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
+        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
 
-        if (existingRoom != null) {
+        if (chatRoom != null) {
             log.info(" 기존 채팅방 조회 성공 - roomCode: {}", roomCode);
 
             // 기존 채팅방 재활성화 (필요한 경우)
-            if (!existingRoom.getIsActive()) {
-                existingRoom.reactivate();
-                chatRoomRepository.save(existingRoom);
+            if (!chatRoom.getIsActive()) {
+                chatRoom.reactivate();
+                chatRoomRepository.save(chatRoom);
                 log.info("🔄 비활성 채팅방 재활성화 - roomCode: {}", roomCode);
             }
 
-            return createChatRoomResponse(existingRoom);
+            return ChatRoomMapper.convertToResponse(chatRoom, 0);
         }
 
         // 5. 새 채팅방 생성
@@ -230,7 +230,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         // 6. AI 환영 메시지 생성 (선택사항 - 필요시 구현)
         // createWelcomeMessage(savedRoom, expo, member);
 
-        return createChatRoomResponse(savedRoom);
+        return ChatRoomMapper.convertToResponse(savedRoom, 0);
     }
 
     /**
@@ -267,23 +267,6 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         }
 
         response.updateTotalUnreadCount(totalBadgeCount);
-        return response;
-    }
-    
-    /**
-     * 채팅방 응답 객체 생성
-     */
-    private Map<String, Object> createChatRoomResponse(ChatRoom chatRoom) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("roomCode", chatRoom.getRoomCode());
-        response.put("expoId", chatRoom.getExpoId());
-        response.put("expoTitle", chatRoom.getExpoTitle());
-        response.put("memberName", chatRoom.getMemberName());
-        response.put("isActive", chatRoom.getIsActive());
-        response.put("currentState", chatRoom.getCurrentState().name());
-        response.put("lastMessageAt", chatRoom.getLastMessageAt());
-        response.put("createdAt", chatRoom.getCreatedAt());
-        
         return response;
     }
 

@@ -1,6 +1,7 @@
 package com.myce.api.controller;
 
 import com.myce.api.auth.dto.CustomUserDetails;
+import com.myce.api.dto.response.ChatRoomInfoResponse;
 import com.myce.api.dto.response.ChatUnreadCountResponse;
 import com.myce.api.service.ExpoChatService;
 import java.util.Map;
@@ -42,12 +43,12 @@ public class UserChatController {
      * 유저가 박람회 상세 페이지에서 1:1 채팅을 시작할 때 사용
      */
     @PostMapping("/expo/{expoId}/room")
-    public ResponseEntity<Map<String, Object>> getOrCreateExpoChatRoom(
+    public ResponseEntity<ChatRoomInfoResponse> getOrCreateExpoChatRoom(
             @PathVariable Long expoId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long memberId = userDetails.getMemberId();
-        Map<String, Object> chatRoom = chatService.getOrCreateExpoChatRoom(expoId, memberId);
+        ChatRoomInfoResponse response = chatService.getOrCreateExpoChatRoom(expoId, memberId);
         
-        return ResponseEntity.ok(chatRoom);
+        return ResponseEntity.ok(response);
     }
 }

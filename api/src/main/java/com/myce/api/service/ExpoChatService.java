@@ -3,6 +3,7 @@ package com.myce.api.service;
 import com.myce.api.auth.dto.CustomUserDetails;
 import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.api.dto.response.ChatRoomInfoListResponse;
+import com.myce.api.dto.response.ChatRoomInfoResponse;
 import com.myce.api.dto.response.ChatUnreadCountResponse;
 import com.myce.common.dto.PageResponse;
 import com.myce.common.type.LoginType;
@@ -37,5 +38,5 @@ public interface ExpoChatService {
     /**
      * 박람회 채팅방 생성 또는 조회
      */
-    Map<String, Object> getOrCreateExpoChatRoom(Long expoId, Long memberId);
+    ChatRoomInfoResponse getOrCreateExpoChatRoom(Long expoId, Long memberId);
 }

@@ -17,7 +17,6 @@ import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.ChatUnreadService;
 import com.myce.api.service.ChatWebSocketBroadcaster;
 import com.myce.api.service.ai.AIChatGenerateService;
-import com.myce.api.util.ChatReadStatusUtil;
 import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
 import com.myce.common.exception.CustomException;
@@ -118,7 +117,7 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
 
             // 관리자가 마지막으로 읽은 메시지 이후의 USER 메시지만 계산
             Long unreadCount = chatUnreadService
-                    .getUnreadCountForViewer(roomCode, chatRoom.getReadStatusJson(), 0L, Role.EXPO_ADMIN);
+                    .getUnreadCountForViewer(roomCode, chatRoom.getReadStatus(), 0L, Role.EXPO_ADMIN);
 
             broadcaster.broadcastUnreadCountUpdate(expoId, roomCode, unreadCount);
 
@@ -254,10 +253,8 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
 
         // readStatusJson에 AI 읽음 상태 업데이트
         String latestMessageId = recentMessages.getId();
-        String currentReadStatus = chatRoom.getReadStatusJson();
-        String updatedReadStatus = ChatReadStatusUtil
-                .updateReadStatus(currentReadStatus, MessageReaderType.AI.name(), recentMessages.getId());
-        chatRoom.updateReadStatus(updatedReadStatus);
+        chatRoom.updateReadStatus(MessageReaderType.AI.name(),  latestMessageId);
+        chatRoomRepository.save(chatRoom);
 
         log.debug("Update read state to AI. roomCode={}, messageId={}", roomCode, latestMessageId);
         ChatUnReadCountPayload readStatusDto = new ChatUnReadCountPayload(roomCode, MessageReaderType.AI, 0);

@@ -2,6 +2,8 @@ package com.myce.domain.document;
 
 import com.myce.domain.document.type.ChatRoomState;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -83,7 +85,7 @@ public class ChatRoom {
     /**
      * 각 사용자별 마지막 읽은 메시지 정보 (JSON 형태)
      */
-    private String readStatusJson;
+    private Map<String, String> readStatus;
 
     /**
      * 채팅방 생성 시간
@@ -153,19 +155,8 @@ public class ChatRoom {
         this.isActive = true;  // 기본값: 활성화
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.readStatusJson = "{}";  // 빈 JSON 객체로 초기화
+        this.readStatus = new HashMap<>();  // 빈 JSON 객체로 초기화
         this.waitingForAdmin = false;  // 기본값: 대기 상태 아님
-        
-        // roomCode 기반 초기 상태 분기 처리
-        if (roomCode != null && roomCode.startsWith("platform-")) {
-            // 플랫폼 채팅방: 기존 상태 유지 (신규 채팅만 AI로 시작)
-            if (this.currentState == null) {
-                this.currentState = ChatRoomState.AI_ACTIVE;  // 신규 채팅: AI로 시작
-            }
-            // 기존에 ADMIN_ACTIVE였다면 그대로 유지하여 상담 연속성 보장
-        } else {
-            this.currentState = null;  // 박람회: legacy fallback 사용 (담당자 배정 로직)
-        }
     }
 
     /**
@@ -269,9 +260,13 @@ public class ChatRoom {
     /**
      * 읽음 상태 업데이트
      */
-    public void updateReadStatus(String readStatusJson) {
-        this.readStatusJson = readStatusJson;
+    public void updateReadStatus(String member, String messageId) {
+        this.readStatus.put(member, messageId);
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public String getCurrentReadStatus(String member) {
+        return readStatus.get(member);
     }
     
     /**

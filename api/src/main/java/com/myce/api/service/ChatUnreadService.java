@@ -4,6 +4,7 @@ package com.myce.api.service;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.type.MessageSenderType;
+import java.util.Map;
 
 /**
  * 채팅 읽지 않은 메시지 계산 통합 서비스
@@ -20,8 +21,8 @@ public interface ChatUnreadService {
      * @param viewerRole 조회하는 사용자 역할 ("USER", "PLATFORM_ADMIN", "EXPO_ADMIN")
      * @return 읽지 않은 메시지 수 (내가 읽어야 할 메시지 개수)
      */
-    long getUnreadCountForViewer(String roomCode, String readStatus, Long viewerId, Role viewerRole);
+    long getUnreadCountForViewer(String roomCode, Map<String, String> readStatus, Long viewerId, Role viewerRole);
     
-    int isReadMessage(ChatMessage message, String readStatus);
+    int isReadMessage(ChatMessage message, Map<String, String> readStatus);
 
 }

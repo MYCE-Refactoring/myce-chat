@@ -13,7 +13,6 @@ import com.myce.api.service.ButtonUpdateService;
 import com.myce.api.service.ChatMessageService;
 import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.SendMessageService;
-import com.myce.api.util.ChatReadStatusUtil;
 import com.myce.api.util.ChatRoomStateSupporter;
 import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
@@ -23,6 +22,7 @@ import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.ChatRoomState;
 import com.myce.domain.repository.ChatRoomCacheRepository;
+import com.myce.domain.repository.ChatRoomRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +44,7 @@ public class AIChatServiceImpl implements AIChatService {
     private final ChatReadStatusService readStatusService;
     private final AIChatGenerateService chatGenerateService;
     private final ChatRoomCacheRepository chatCacheRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     @Override
     public ChatStatusResponse getAiChatStatus(String roomCode) {
@@ -166,15 +167,13 @@ public class AIChatServiceImpl implements AIChatService {
         String roomCode = chatRoom.getRoomCode();
 
         // 가장 최근 메시지 ID 조회
-        ChatMessage recentMessages = chatMessageService.getRecentMessage(roomCode);
-        if (recentMessages == null) return;
+        ChatMessage recentMessage = chatMessageService.getRecentMessage(roomCode);
+        if (recentMessage == null) return;
 
         // readStatusJson에 AI 읽음 상태 업데이트
-        String latestMessageId = recentMessages.getId();
-        String currentReadStatus = chatRoom.getReadStatusJson();
-        String updatedReadStatus = ChatReadStatusUtil
-                .updateReadStatus(currentReadStatus, MessageReaderType.AI.name(), recentMessages.getId());
-        chatRoom.updateReadStatus(updatedReadStatus);
+        String latestMessageId = recentMessage.getId();
+        chatRoom.updateReadStatus(MessageReaderType.AI.name(),  latestMessageId);
+        chatRoomRepository.save(chatRoom);
 
         log.debug("Update read state to AI. roomCode={}, messageId={}", roomCode, latestMessageId);
         readStatusService.updateChatReadStatus(roomCode, MessageReaderType.AI);

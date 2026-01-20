@@ -48,8 +48,9 @@ public class ChatRoomResponseMakeService {
         Map<String, Long> chatRoomUnreadCounts = new HashMap<>();
         for (ChatRoom chatRoom : chatRooms) {
             String roomCode = chatRoom.getRoomCode();
-            String readStatus = chatRoom.getReadStatusJson();
-            long unreadCount = chatUnreadService.getUnreadCountForViewer(roomCode, readStatus, viewerId, viewerRole);
+
+            long unreadCount = chatUnreadService.getUnreadCountForViewer
+                    (roomCode, chatRoom.getReadStatus(), viewerId, viewerRole);
             chatRoomUnreadCounts.put(roomCode, unreadCount);
         }
 

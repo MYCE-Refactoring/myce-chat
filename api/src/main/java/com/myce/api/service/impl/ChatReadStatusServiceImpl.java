@@ -6,7 +6,6 @@ import com.myce.api.dto.message.type.BroadcastType;
 import com.myce.api.dto.message.type.MessageReaderType;
 import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.ChatWebSocketBroadcaster;
-import com.myce.api.util.ChatReadStatusUtil;
 import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
 import com.myce.common.exception.CustomException;
@@ -48,10 +47,10 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        String updateReadStatus = ChatReadStatusUtil
-                .updateReadStatus(chatRoom.getReadStatusJson(), role.name(), lastReadMessageId);
-        chatRoom.updateReadStatus(updateReadStatus);
-
+        String readerType = Role.EXPO_SUPER_ADMIN.equals(role) || Role.PLATFORM_ADMIN.equals(role) ?
+                MessageReaderType.ADMIN.name() : MessageReaderType.USER.name();
+        chatRoom.updateReadStatus(readerType,  lastReadMessageId);
+        chatRoomRepository.save(chatRoom);
         log.debug("[ChatReadStatusService] Mark as read for member. roomCode={}, memberId={}, lastReadMessageId={}",
                 roomCode, memberId, lastReadMessageId);
     }
@@ -78,26 +77,15 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
         }
 
         // 마지막 메시지 ID를 가져와서 읽음 처리 (가장 최근 메시지까지 읽음 처리)
-        markAsRecentMessage(chatRoom, lastReadMessageId);
+        chatRoom.updateReadStatus(MessageReaderType.ADMIN.name(),  lastReadMessageId);
 
         // 관리자 활동 시간 업데이트 (담당자가 있을 경우)
         chatRoom.updateAdminActivity();
+        chatRoomRepository.save(chatRoom);
 
         // WebSocket을 통해 상대방(사용자)에게 읽음 상태 변경 알림
         webSocketBroadcaster.broadcastUnreadCountUpdate(expoId, roomCode, 0L);
 
-    }
-
-    private void markAsRecentMessage(ChatRoom chatRoom, String lastReadMessageId) {
-        String roomCode = chatRoom.getRoomCode();
-        String currentReadStatus = chatRoom.getReadStatusJson();
-        String updatedReadStatus = ChatReadStatusUtil.updateReadStatus(
-                currentReadStatus, MessageReaderType.ADMIN.name(), lastReadMessageId);
-
-        log.debug("[ChatReadStatusService] Update last read message.roomCode={}, latestMessageId={}, currentStatus={}",
-                roomCode, lastReadMessageId, updatedReadStatus);
-
-        chatRoom.updateReadStatus(updatedReadStatus);
     }
 
     private void resetAndRecalculateBadgeCount(String roomCode, Long memberId) {

@@ -124,7 +124,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         List<ChatMessageResponse> chatMessageResponse = chateMesages.stream()
             .map(message -> {
                 // 최적화된 메서드 사용 - ChatRoom을 재사용하여 MongoDB 조회 제거
-                int isRead = unreadService.isReadMessage(message, chatRoom.getReadStatusJson());
+                int isRead = unreadService.isReadMessage(message, chatRoom.getReadStatus());
                 return ChatMessageMapper.toResponse(message, isRead);
             })
             .toList();
@@ -153,7 +153,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        return unreadService.getUnreadCountForViewer(roomCode, chatRoom.getReadStatusJson(), memberId, role);
+        return unreadService.getUnreadCountForViewer(roomCode, chatRoom.getReadStatus(), memberId, role);
     }
 
     private ChatRoom getChatRoom(String roomCode) {

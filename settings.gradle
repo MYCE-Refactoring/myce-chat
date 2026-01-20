@@ -1,5 +1,2 @@
 rootProject.name = 'myce-chat'
-include 'api'
-include 'common'
-include 'domain'
-include 'internal'
+include 'api', 'common', 'domain'

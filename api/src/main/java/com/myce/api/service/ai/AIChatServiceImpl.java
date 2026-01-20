@@ -67,8 +67,7 @@ public class AIChatServiceImpl implements AIChatService {
         chatRoom.stopWaitingForAdmin();
         chatRoom.transitionToState(ChatRoomState.ADMIN_ACTIVE);
 
-        // TODO Redis 캐시 무효화 작업 -> null로 하는게 맞는건지 확인하기
-        chatCacheRepository.cacheChatRoom(roomCode, null); // null로 설정하여 캐시 무효화
+        chatCacheRepository.invalidateRoomCache(roomCode);
 
         log.info("Admin assigned and AI blocked - roomCode: {}, adminCode: {}, hasAdmin: {}, finalState: {}",
             roomCode, adminCode, chatRoom.hasAssignedAdmin(), chatRoom.getCurrentState());
@@ -113,10 +112,11 @@ public class AIChatServiceImpl implements AIChatService {
     @Override
     public ChatMessageResponse requestAdminHandoff(ChatRoom chatRoom) {
         String roomCode = chatRoom.getRoomCode();
-        ChatMessage savedMessage = chatMessageService.saveAIChatMessage(roomCode, SystemMessage.AI_INVITE_MESSAGE);
+        ChatMessage savedMessage = chatMessageService
+                .saveAIChatMessage(roomCode, SystemMessage.AI_INVITE_MESSAGE);
 
         chatRoom.startWaitingForAdmin();
-        chatCacheRepository.cacheChatRoom(roomCode, null);
+        chatCacheRepository.cacheChatRoom(roomCode, chatRoom);
 
         return ChatMessageMapper.toResponse(savedMessage);
     }
@@ -126,7 +126,7 @@ public class AIChatServiceImpl implements AIChatService {
         String roomCode = chatRoom.getRoomCode();
         chatRoom.stopWaitingForAdmin(); // waitingForAdmin = false
         chatRoom.transitionToState(ChatRoomState.AI_ACTIVE); // currentState = AI_ACTIVE
-        chatCacheRepository.cacheChatRoom(roomCode, null);
+        chatCacheRepository.invalidateRoomCache(roomCode);
 
         ChatMessage savedMessage = chatMessageService.saveAIChatMessage(roomCode, SystemMessage.CANCEL_HANDOFF);
 
@@ -141,7 +141,7 @@ public class AIChatServiceImpl implements AIChatService {
         chatRoom.stopWaitingForAdmin(); // waitingForAdmin = false로 변경됨
 
         String roomCode = chatRoom.getRoomCode();
-        chatCacheRepository.cacheChatRoom(roomCode, null);
+        chatCacheRepository.invalidateRoomCache(roomCode);
         log.debug("Reset redis cache for ai handoff. roomCode={}", roomCode);
 
         ChatMessage chatMessage = chatMessageService

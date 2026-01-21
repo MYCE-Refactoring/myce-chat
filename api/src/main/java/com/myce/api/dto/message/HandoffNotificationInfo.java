@@ -10,5 +10,5 @@ public class HandoffNotificationInfo {
     private String roomCode;
     private Long userId;
     private String userName;
-    private LocalDateTime sendAt;
+    private LocalDateTime sentAt;
 }

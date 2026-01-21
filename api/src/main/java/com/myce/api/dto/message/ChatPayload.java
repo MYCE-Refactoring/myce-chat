@@ -12,20 +12,20 @@ public class ChatPayload {
     private final MessageSenderType senderType;
     private final String senderName;
     private final String content;
-    private final LocalDateTime sendAt;
+    private final LocalDateTime sentAt;
 
     private String adminCode;
     private String adminDisplayName;
 
     public ChatPayload(String roomCode, String messageId, Long senderId, MessageSenderType senderType,
-            String senderName, String content, LocalDateTime sendAt) {
+            String senderName, String content, LocalDateTime sentAt) {
         this.roomCode = roomCode;
         this.messageId = messageId;
         this.senderId = senderId;
         this.senderType = senderType;
         this.senderName = senderName;
         this.content = content;
-        this.sendAt = sendAt;
+        this.sentAt = sentAt;
     }
 
     public void addAdminInfo(String adminCode, String adminDisplayName) {

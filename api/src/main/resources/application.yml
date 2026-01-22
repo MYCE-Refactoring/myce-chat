@@ -8,11 +8,25 @@ spring:
     import:
       - optional:classpath:application-domain.yml
       - optional:file:./.env[.properties]
+  # AI Configuration
+  ai:
+    bedrock:
+      aws:
+        region: ${AWS_REGION:ap-northeast-2}
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+      converse:
+        chat:
+          options:
+            model: apac.amazon.nova-lite-v1:0  # Use APAC inference profile for ap-northeast-2
+            temperature: 0.7
+            max-tokens: 400
 internal:
   auth:
     value: local-gateway
   core:
-    url: http://localhost:8081
+    url: http://localhost:8082
+    value: internal-request
 
 
 scheduler:

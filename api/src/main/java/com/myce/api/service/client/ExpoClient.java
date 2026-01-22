@@ -84,7 +84,6 @@ public class ExpoClient {
 
         return client.get()
                 .uri(uri)
-                .header(InternalHeaderKey.INTERNAL_AUTH, "local-gateway")
                 .retrieve()
                 .toEntity(responseType);
     }
@@ -94,7 +93,6 @@ public class ExpoClient {
 
         return Boolean.TRUE.equals(client.get()
                 .uri(uri)
-                .header(InternalHeaderKey.INTERNAL_AUTH, "local-gateway")
                 .exchange((req, res) -> {
                     log.debug("[ExpoClient-bodiless] res status={}", res.getStatusCode());
                     return res.getStatusCode().equals(HttpStatus.OK);

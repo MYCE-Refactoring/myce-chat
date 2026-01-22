@@ -10,12 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/chats/rooms")
 public class ChatRoomStateController {
 
     private final ChatRoomStateService chatRoomStateService;

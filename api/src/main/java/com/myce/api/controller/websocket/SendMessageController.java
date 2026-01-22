@@ -1,9 +1,8 @@
 package com.myce.api.controller.websocket;
 
 import com.myce.api.controller.supporter.SessionUserInfoSupporter;
-import com.myce.api.dto.request.ChatReadStatusRequest;
-import com.myce.api.dto.request.SendMessageRequest;
 import com.myce.api.dto.WebSocketUserInfo;
+import com.myce.api.dto.request.SendMessageRequest;
 import com.myce.api.service.SendMessageService;
 import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
@@ -14,12 +13,10 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/chats/rooms")
 public class SendMessageController {
 
     private final SendMessageService sendMessageService;

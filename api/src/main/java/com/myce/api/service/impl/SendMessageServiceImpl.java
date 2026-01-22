@@ -90,7 +90,6 @@ public class SendMessageServiceImpl implements SendMessageService {
         ChatMessage chatMessage = messageSaveComponent.saveMessage(memberId, role, loginType, chatRoom, content);
 
         // 2. 사용자 메시지 브로드캐스트
-
         ChatRoomStateInfo chatRoomStateInfo = ChatRoomStateSupporter
                 .createRoomStateInfo(chatRoom, TransitionReason.USER_MESSAGE);
         ChatPayload payload = getPayload(roomCode, chatMessage);

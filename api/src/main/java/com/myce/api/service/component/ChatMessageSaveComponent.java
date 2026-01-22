@@ -3,8 +3,9 @@ package com.myce.api.service.component;
 import com.myce.api.dto.SenderInfo;
 import com.myce.api.service.ChatMessageService;
 import com.myce.api.service.client.ExpoClient;
-import com.myce.api.service.impl.ChatRoomAccessCheckService;
 import com.myce.api.util.RoomCodeSupporter;
+import com.myce.common.exception.CustomErrorCode;
+import com.myce.common.exception.CustomException;
 import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
@@ -29,7 +30,6 @@ public class ChatMessageSaveComponent {
     private final ChatMessageService chatMessageService;
     private final ChatRoomCacheRepository chatRoomCacheRepository;
     private final ChatMessageCacheRepository chatMessageCacheRepository;
-    private final ChatRoomAccessCheckService chatRoomAccessCheckService;
 
     public ChatMessage saveMessage(Long memberId, Role role, LoginType loginType, ChatRoom chatRoom, String content) {
         String roomCode = chatRoom.getRoomCode();
@@ -121,40 +121,37 @@ public class ChatMessageSaveComponent {
         }
     }
 
-    public SenderInfo getSenderInfo(String roomCode, Long memberId, Role role, LoginType loginType) {
-        String name = "임시";
-
-        Role senderRole = role;
-        String senderName = name;
-        MessageSenderType senderType = role.equals(Role.USER) ? MessageSenderType.USER : MessageSenderType.ADMIN;
-        // Handle platform rooms (format: platform-{userId})
-        // TODO 각 상황에 따른 메소드로 분리 - SenderTypeService 따로 생성하면 될 듯
-        if (RoomCodeSupporter.isPlatformRoom(roomCode) && Role.PLATFORM_ADMIN.equals(role)) {
-            senderName = Role.PLATFORM_ADMIN.getDisplayName();
+    public SenderInfo getSenderInfo(String roomCode, long memberId, Role role, LoginType loginType) {
+        if (RoomCodeSupporter.isPlatformRoom(roomCode)) {
+            return getSenderInfoForPlatformRoom(roomCode, memberId, role);
         } else {
-            Long expoId = RoomCodeSupporter.extractExpoIdFromRoomCode(roomCode);
-            Long participantId = RoomCodeSupporter.extractMemberIdFromRoomCode(roomCode);
-
-            chatRoomAccessCheckService.isValidAccess(loginType, expoId, memberId, participantId, role);
-
-            if (LoginType.ADMIN_CODE.equals(loginType)
-                    && expoClient.checkAdminExpoAccessible(expoId, memberId)) {
-                // TODO senderRole = "ADMIN"로 되어있었음 처리 필요;
-                senderName = role.getDisplayName();
-            } else if (Role.EXPO_ADMIN.equals(role)) {
-                boolean isExpoOwner = expoClient.checkMemberExpoOwner(expoId, memberId);
-                if (isExpoOwner) {
-                    senderName = role.getDisplayName();
-                } else {
-                    senderRole = Role.USER;
-                    senderType = MessageSenderType.USER;
-                }
-            }
-
-            log.debug("Check message sender type. memberId={}, senderRole={}, senderName={}, loginType={}, expoId={}",
-                    memberId, senderRole, senderName, loginType, expoId);
+            return getSenderInfoForExpoRoom(roomCode, memberId, role, loginType);
         }
+    }
 
-        return new SenderInfo(senderRole, senderType, senderName);
+    private SenderInfo getSenderInfoForPlatformRoom(String roomCode, long memberId, Role role) {
+        if (Role.PLATFORM_ADMIN.equals(role)) {
+            return new SenderInfo(role, MessageSenderType.ADMIN, Role.PLATFORM_ADMIN.getDisplayName());
+        } else {
+            Long participantId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
+            if (participantId != memberId) throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
+
+            return new SenderInfo(Role.USER, MessageSenderType.USER, "사용자명 넣기");
+        }
+    }
+
+    private SenderInfo getSenderInfoForExpoRoom(String roomCode, long memberId, Role role, LoginType loginType) {
+        Long expoId = RoomCodeSupporter.extractExpoIdFromRoomCode(roomCode);
+        Long participantId = RoomCodeSupporter.extractMemberIdFromRoomCode(roomCode);
+
+        if (LoginType.ADMIN_CODE.equals(loginType) && expoClient.checkAdminExpoAccessible(expoId, memberId)) {
+            return new SenderInfo(role, MessageSenderType.ADMIN, role.getDisplayName());
+        } if (participantId == memberId) {
+            return new SenderInfo(Role.USER, MessageSenderType.USER, "사용자명 넣기");
+        } else if (Role.EXPO_ADMIN.equals(role) && expoClient.checkMemberExpoOwner(expoId, memberId)) {
+            return new SenderInfo(role, MessageSenderType.ADMIN, role.getDisplayName());
+        } else {
+            throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
+        }
     }
 }

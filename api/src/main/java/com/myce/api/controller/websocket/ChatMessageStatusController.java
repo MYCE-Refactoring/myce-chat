@@ -1,20 +1,18 @@
 package com.myce.api.controller.websocket;
 
 import com.myce.api.controller.supporter.SessionUserInfoSupporter;
+import com.myce.api.dto.WebSocketUserInfo;
 import com.myce.api.dto.request.ChatReadStatusRequest;
 import com.myce.api.service.ChatReadStatusService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/chats/rooms")
 public class ChatMessageStatusController {
 
     private final ChatReadStatusService chatReadStatusService;

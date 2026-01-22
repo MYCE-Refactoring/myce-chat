@@ -3,19 +3,17 @@ package com.myce.api.controller.websocket;
 import com.myce.api.controller.supporter.SessionUserInfoSupporter;
 import com.myce.api.dto.WebSocketUserInfo;
 import com.myce.api.service.ChatRoomStateService;
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/chats/rooms")
 public class ChatRoomStateController {
 
     private final ChatRoomStateService chatRoomStateService;
@@ -26,7 +24,8 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/request-handoff")
     public ResponseEntity<Object> requestHandoff(
-            @Header("room-code") String roomCode, SimpMessageHeaderAccessor headerAccessor) {
+            @PathParam("roomCode") String roomCode,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
@@ -41,7 +40,8 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/cancel-handoff")
     public ResponseEntity<Object> cancelHandoff(
-            @Header("room-code") String roomCode, SimpMessageHeaderAccessor headerAccessor) {
+            @PathParam("roomCode") String roomCode,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
@@ -56,7 +56,8 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/proactive-intervention")
     public ResponseEntity<Object> proactiveIntervention(
-            @Header("room-code") String roomCode, SimpMessageHeaderAccessor headerAccessor) {
+            @PathParam("roomCode") String roomCode,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
@@ -71,7 +72,8 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/accept-handoff")
     public ResponseEntity<Object> acceptHandoff(
-            @Header("room-code") String roomCode, SimpMessageHeaderAccessor headerAccessor) {
+            @PathParam("roomCode") String roomCode,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
@@ -86,7 +88,8 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/request-ai")
     public ResponseEntity<Object> requestAI(
-            @Header("room-code") String roomCode, SimpMessageHeaderAccessor headerAccessor) {
+            @PathParam("roomCode") String roomCode,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();

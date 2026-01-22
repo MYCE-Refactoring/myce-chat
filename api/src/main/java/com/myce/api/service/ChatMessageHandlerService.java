@@ -1,6 +1,5 @@
 package com.myce.api.service;
 
-import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatRoom;
 

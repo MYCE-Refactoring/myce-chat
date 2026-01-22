@@ -81,10 +81,9 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("sentAt").descending());
         Page<ChatMessage> messages = chatMessageRepository.findByRoomCodeOrderBySentAtDesc(roomCode, pageable);
 
-        String readStatus = chatRoom.getReadStatusJson();
         List<ChatMessageResponse> chatMessageResponse = new ArrayList<>();
         for (ChatMessage chatMessage: messages) {
-            int isRead = chatUnreadService.isReadMessage(chatMessage, readStatus);
+            int isRead = chatUnreadService.isReadMessage(chatMessage, chatRoom.getReadStatus());
             chatMessageResponse.add(mapToMessageResponse(chatMessage, isRead));
         }
 
@@ -169,8 +168,8 @@ public class ExpoChatServiceImpl implements ExpoChatService {
                 String roomCode = chatRoom.getRoomCode();
                 Long unreadCount = chatMessageCacheRepository.getUnreadCount(roomCode, memberId);
                 if (unreadCount == null) {
-                    String readStatus = chatRoom.getReadStatusJson();
-                    unreadCount = chatUnreadService.getUnreadCountForViewer(roomCode, readStatus, memberId, Role.USER);
+                    unreadCount = chatUnreadService.getUnreadCountForViewer
+                            (roomCode, chatRoom.getReadStatus(), memberId, Role.USER);
                     chatMessageCacheRepository.incrementUnreadCount(roomCode, memberId, unreadCount);
                 }
                 response.addRoomUnreadCount(roomCode, unreadCount);
@@ -260,8 +259,8 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         long totalBadgeCount = 0L;
         for (ChatRoom chatRoom : userChatRooms) {
             String roomCode = chatRoom.getRoomCode();
-            String readStatus = chatRoom.getReadStatusJson();
-            long count = chatUnreadService.getUnreadCountForViewer(roomCode, readStatus, memberId, Role.USER);
+            long count = chatUnreadService.getUnreadCountForViewer
+                    (roomCode, chatRoom.getReadStatus(), memberId, Role.USER);
             response.addRoomUnreadCount(roomCode, count);
             totalBadgeCount += count;
         }

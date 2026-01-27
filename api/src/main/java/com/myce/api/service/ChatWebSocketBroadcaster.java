@@ -32,7 +32,7 @@ public interface ChatWebSocketBroadcaster {
     /**
      * 미읽음 카운트 업데이트 브로드캐스트 (박람회 관리자용)
      */
-    void broadcastUnreadCountUpdate(Long expoId, String roomCode, Long unreadCount);
+    void broadcastUnreadCountUpdate(String roomCode, MessageReaderType readerType, Long unreadCount);
 
     /**
      * 담당자 배정 브로드캐스트

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
  * ChatMessage MongoDB Repository
  */
 @Repository
-public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
+public interface ChatMessageRepository extends MongoRepository<ChatMessage, String>, ChatMessageRepositoryCustom {
     
     /**
      * 채팅방별 메시지 조회 (페이징)
@@ -25,10 +25,8 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     List<ChatMessage> findTop50ByRoomCodeOrderBySentAtDesc(String roomCode);
 
     Optional<ChatMessage> findTop1ByRoomCodeOrderBySentAtDesc(String roomCode);
-    /**
-     * 채팅방별 메시지 개수
-     */
-    long countByRoomCode(String roomCode);
+
+    Optional<ChatMessage> findTop1ByRoomCodeOrderBySeqDesc(String roomCode);
     
     /**
      * 채팅방에서 특정 발송자 타입의 메시지 개수 (안읽은 메시지 계산용)
@@ -36,12 +34,9 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     long countByRoomCodeAndSenderType(String roomCode, String senderType);
     
     /**
-     * 채팅방에서 특정 메시지 ID 이후의 특정 발송자 타입 메시지 개수
+     * 채팅방에서 특정 seq 이후의 특정 발송자 타입 메시지 개수
      */
-    long countByRoomCodeAndSenderTypeAndIdGreaterThan(String roomCode, String senderType, String messageId);
-    
-    /**
-     * 채팅방에서 여러 발송자 타입 중 하나라도 해당하는 메시지 개수 (플랫폼 상태 결정용)
-     */
-    long countByRoomCodeAndSenderTypeIn(String roomCode, List<String> senderTypes);
+    long countByRoomCodeAndSenderTypeAndSeqGreaterThan(String roomCode, String senderType, Long messageSeq);
+
+
 }

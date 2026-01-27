@@ -8,6 +8,7 @@ import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.ExpoChatService;
 import com.myce.common.dto.PageResponse;
 import com.myce.common.type.LoginType;
+import com.myce.common.type.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -70,7 +71,14 @@ public class ExpoChatController {
             @RequestBody ChatReadRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long memberId = userDetails.getMemberId();
-        chatReadStatusService.markAsReadForAdmin(expoId, roomCode, request.getLastReadMessageId(), memberId);
+        chatReadStatusService.markAsReadForAdmin(
+                expoId,
+                roomCode,
+                request.getLastReadSeq(),
+                memberId,
+                Role.fromName(userDetails.getRole()),
+                userDetails.getLoginType()
+        );
         return ResponseEntity.ok().build();
     }
 
@@ -83,7 +91,12 @@ public class ExpoChatController {
             @PathVariable String roomCode,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long memberId = userDetails.getMemberId();
-        Long unreadCount = chatService.getUnreadCount(expoId, roomCode, memberId);
+        Long unreadCount = chatService.getUnreadCount(
+                expoId,
+                roomCode,
+                memberId,
+                userDetails.getLoginType()
+        );
         return ResponseEntity.ok(unreadCount);
     }
 }

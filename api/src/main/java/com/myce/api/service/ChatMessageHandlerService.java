@@ -1,6 +1,7 @@
 package com.myce.api.service;
 
 import com.myce.common.type.Role;
+import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 
 /**
@@ -18,12 +19,7 @@ public interface ChatMessageHandlerService {
      * - 자동 읽음 처리 (필요시)
      * - 미읽음 카운트 업데이트
      */
-    void handleUserMessageFlow(Long memberId, Role role, ChatRoom chatRoom, String content, String messageId);
-
-    /**
-     * 자동 읽음 처리 (플랫폼 상담 중일 때)
-     */
-    void handleAutoReadLogic(Long memberId, Role role, String messageId, ChatRoom currentRoom);
+    void handleUserMessageFlow(Long memberId, Role role, ChatRoom chatRoom, ChatMessage chatMessage);
 
     /**
      * 미읽음 카운트 업데이트 처리

@@ -1,6 +1,7 @@
 package com.myce.api.controller;
 
 import com.myce.api.auth.dto.CustomUserDetails;
+import com.myce.api.dto.request.ChatReadRequest;
 import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.api.service.ChatMessageService;
 import com.myce.api.service.ChatReadStatusService;
@@ -13,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,11 +52,18 @@ public class ChatMessageController {
     @PostMapping("/read")
     public ResponseEntity<Void> markAsRead(
             @PathVariable("room-code") String roomCode,
+            @RequestBody(required = false) ChatReadRequest request,
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
         Role role = Role.fromName(customUserDetails.getRole());
-        // TODO 이거 null 처리할거면 왜 하는거임
-        readStatusService.markAsReadForMember(roomCode, null, customUserDetails.getMemberId(), role);
+        Long lastReadSeq = request != null ? request.getLastReadSeq() : null;
+        readStatusService.markAsReadForMember(
+                roomCode,
+                lastReadSeq,
+                customUserDetails.getMemberId(),
+                role,
+                customUserDetails.getLoginType()
+        );
 
         return ResponseEntity.noContent().build();
     }
@@ -68,8 +77,12 @@ public class ChatMessageController {
             @PathVariable("room-code") String roomCode,
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        Long unreadCount = chatMessageService.getUnreadCount(roomCode,
-                customUserDetails.getMemberId(), customUserDetails.getRole());
+        Long unreadCount = chatMessageService.getUnreadCount(
+                roomCode,
+                customUserDetails.getMemberId(),
+                customUserDetails.getRole(),
+                customUserDetails.getLoginType()
+        );
 
         return ResponseEntity.ok(unreadCount);
     }

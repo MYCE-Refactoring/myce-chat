@@ -65,7 +65,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
 
         // 해당 박람회의 채팅방 목록 조회
         List<ChatRoom> chatRooms = chatRoomRepository.findByExpoIdAndIsActiveTrueOrderByLastMessageAtDesc(expoId);
-        return responseMakeService.convertToResponse(chatRooms, 0L, Role.EXPO_ADMIN);
+        return responseMakeService.convertToResponse(chatRooms, memberId, Role.EXPO_ADMIN, loginType);
     }
 
     @Override
@@ -83,8 +83,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
 
         List<ChatMessageResponse> chatMessageResponse = new ArrayList<>();
         for (ChatMessage chatMessage: messages) {
-            int isRead = chatUnreadService.isReadMessage(chatMessage, chatRoom.getReadStatus());
-            chatMessageResponse.add(mapToMessageResponse(chatMessage, isRead));
+            chatMessageResponse.add(mapToMessageResponse(chatMessage));
         }
 
         return new PageResponse<>(
@@ -102,7 +101,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
     // 중복 메서드 제거됨 - ChatReadStatusUtil로 통합
 
     @Override
-    public Long getUnreadCount(Long expoId, String roomCode, Long memberId) {
+    public Long getUnreadCount(Long expoId, String roomCode, Long memberId, LoginType loginType) {
         // 채팅방 존재 확인
         ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
@@ -118,13 +117,19 @@ public class ExpoChatServiceImpl implements ExpoChatService {
             // Redis에서 관리자의 미읽음 카운트 조회 (10ms 미만)
             Long cachedUnreadCount = chatMessageCacheRepository.getUnreadCount(roomCode, memberId);
             
-            if (cachedUnreadCount != null && cachedUnreadCount > 0) {
+            if (cachedUnreadCount != null) {
                 log.debug("Cache hit: unread count {} for admin {} in room {}", cachedUnreadCount, memberId, roomCode);
                 return cachedUnreadCount;
             }
             
             // 캐시 미스 시 MongoDB에서 계산하고 캐싱
-            long unreadCount = chatMessageRepository.countByRoomCodeAndSenderType(roomCode, "USER");
+            long unreadCount = chatUnreadService.getUnreadCount(
+                    roomCode,
+                    chatRoom.getReadStatus(),
+                    memberId,
+                    Role.EXPO_ADMIN,
+                    loginType
+            );
             
             // 결과를 Redis에 캐싱 (다음 조회 시 빠른 응답)
             if (unreadCount > 0) {
@@ -142,7 +147,6 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         }
     }
 
-    // extractLastReadMessageId 메서드 제거됨 - ChatUnreadService로 통합
     @Override
     public ChatUnreadCountResponse getAllUnreadCountsForUser(Long memberId) {
         try {
@@ -168,8 +172,8 @@ public class ExpoChatServiceImpl implements ExpoChatService {
                 String roomCode = chatRoom.getRoomCode();
                 Long unreadCount = chatMessageCacheRepository.getUnreadCount(roomCode, memberId);
                 if (unreadCount == null) {
-                    unreadCount = chatUnreadService.getUnreadCountForViewer
-                            (roomCode, chatRoom.getReadStatus(), memberId, Role.USER);
+                    unreadCount = chatUnreadService.getUnreadCount
+                            (roomCode, chatRoom.getReadStatus(), memberId, Role.USER, LoginType.MEMBER);
                     chatMessageCacheRepository.incrementUnreadCount(roomCode, memberId, unreadCount);
                 }
                 response.addRoomUnreadCount(roomCode, unreadCount);
@@ -194,6 +198,10 @@ public class ExpoChatServiceImpl implements ExpoChatService {
 
         ExpoInfo expo = expoClient.getExpoInfo(expoId);
         MemberInfo member = memberClient.getMemberInfo(memberId);
+
+        if (expo.getOwnerMemberId().equals(memberId)) {
+            throw new CustomException(CustomErrorCode.CHAT_ROOM_NOT_CREATE);
+        }
 
         // 3. 채팅방 코드 생성 (admin-{expoId}-{userId})
         String roomCode = RoomCodeSupporter.getAdminRoomCode(expoId, memberId);
@@ -235,7 +243,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
     /**
      * ChatMessage -> MessageResponse 매핑
      */
-    private ChatMessageResponse mapToMessageResponse(ChatMessage message, int isRead) {
+    private ChatMessageResponse mapToMessageResponse(ChatMessage message) {
         // 관리자 메시지인 경우 관리자 정보 추가
         String adminCode = null;
         String adminDisplayName = null;
@@ -245,7 +253,7 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         }
 
         // ChatMessageMapper 사용
-        return ChatMessageMapper.toResponse(message, isRead, adminCode, adminDisplayName);
+        return ChatMessageMapper.toResponse(message, adminCode, adminDisplayName);
     }
 
     /**
@@ -259,8 +267,8 @@ public class ExpoChatServiceImpl implements ExpoChatService {
         long totalBadgeCount = 0L;
         for (ChatRoom chatRoom : userChatRooms) {
             String roomCode = chatRoom.getRoomCode();
-            long count = chatUnreadService.getUnreadCountForViewer
-                    (roomCode, chatRoom.getReadStatus(), memberId, Role.USER);
+            long count = chatUnreadService.getUnreadCount
+                    (roomCode, chatRoom.getReadStatus(), memberId, Role.USER, LoginType.MEMBER);
             response.addRoomUnreadCount(roomCode, count);
             totalBadgeCount += count;
         }

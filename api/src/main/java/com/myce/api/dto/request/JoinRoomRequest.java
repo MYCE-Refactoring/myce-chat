@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class JoinRoomRequest {
     
-    private String roomId;  // "admin-{expoId}-{userId}" 형식
+    private String roomCode;  // "admin-{expoId}-{userId}" 형식
     
     @Builder
     public JoinRoomRequest(String roomId) {
-        this.roomId = roomId;
+        this.roomCode = roomId;
     }
 }

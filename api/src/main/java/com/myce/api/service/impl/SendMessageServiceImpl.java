@@ -29,6 +29,7 @@ import com.myce.domain.repository.ChatRoomRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -43,13 +44,23 @@ public class SendMessageServiceImpl implements SendMessageService {
     private final ChatAdminAssignmentComponent adminAssignmentComponent;
 
     @Override
+    @Transactional
     public void sendChatMessage(Long memberId, Role role, LoginType loginType, String sessionId, SendMessageRequest request) {
-        String roomCode = request.getRoomId();
+        String roomCode = request.getRoomCode();
         String content = request.getContent();
 
         log.debug("[SendMessageService] Send chat message.memberId={}, roomCode={}", memberId, roomCode);
+        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
+
+        // 1. 메시지 저장
+        ChatMessage chatMessage = messageSaveComponent.saveMessage(memberId, role, loginType, chatRoom, content);
+
         try {
-            broadcastMessage(memberId, role, loginType, roomCode, content);
+            // 2. 메시지 전송
+            broadcastMessage(chatRoom, chatMessage);
+            // 3. 사용자 메시지 플로우 처리 (AI 응답, 자동 읽음, 미읽음 업데이트)
+            messageHandler.handleUserMessageFlow(memberId, role, chatRoom, chatMessage);
         } catch (Exception e) {
             log.error("[SendMessageService] Failed to send message. memberId={}, roomCode={}", memberId, roomCode, e);
             throw new CustomWebSocketException(new CustomWebSocketError(sessionId,
@@ -59,7 +70,7 @@ public class SendMessageServiceImpl implements SendMessageService {
 
     @Override
     public void sendAdminChatMessage(Long memberId, Role role, LoginType loginType, String sessionId, SendMessageRequest request) {
-        String roomId = request.getRoomId();
+        String roomId = request.getRoomCode();
         String content = request.getContent();
 
         try {
@@ -82,25 +93,12 @@ public class SendMessageServiceImpl implements SendMessageService {
         }
     }
 
-    public void broadcastMessage(Long memberId, Role role, LoginType loginType, String roomCode,  String content) {
-        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
-
-        // 1. 메시지 저장
-        ChatMessage chatMessage = messageSaveComponent.saveMessage(memberId, role, loginType, chatRoom, content);
-
-        // 2. 사용자 메시지 브로드캐스트
+    public void broadcastMessage(ChatRoom chatRoom, ChatMessage chatMessage) {
+        String roomCode = chatRoom.getRoomCode();
         ChatRoomStateInfo chatRoomStateInfo = ChatRoomStateSupporter
                 .createRoomStateInfo(chatRoom, TransitionReason.USER_MESSAGE);
         ChatPayload payload = getPayload(roomCode, chatMessage);
         broadcaster.broadcastUserMessage(roomCode, payload, chatRoomStateInfo);
-
-        // 3. 사용자 메시지 플로우 처리 (AI 응답, 자동 읽음, 미읽음 업데이트)
-        messageHandler.handleUserMessageFlow(
-                memberId,
-                role,
-                chatRoom, content,
-                chatMessage.getId());
     }
 
     private void broadcastAdminMessage(Long memberId, Role role, LoginType loginType, String roomCode, String sessionId, String content) {
@@ -168,6 +166,7 @@ public class SendMessageServiceImpl implements SendMessageService {
         return new ChatPayload(
                 roomCode,
                 chatMessage.getId(),
+                chatMessage.getSeq(),
                 chatMessage.getSenderId(),
                 chatMessage.getSenderType(),
                 chatMessage.getSenderName(),

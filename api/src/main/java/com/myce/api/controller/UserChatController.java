@@ -4,7 +4,6 @@ import com.myce.api.auth.dto.CustomUserDetails;
 import com.myce.api.dto.response.ChatRoomInfoResponse;
 import com.myce.api.dto.response.ChatUnreadCountResponse;
 import com.myce.api.service.ExpoChatService;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

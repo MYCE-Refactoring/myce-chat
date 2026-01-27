@@ -48,6 +48,7 @@ public class ChatRoomStateServiceImpl implements ChatRoomStateService {
     @Override
     @Transactional
     public void adminHandoff(WebSocketUserInfo userInfo, String roomCode, String sessionId) {
+        log.debug("[ChatRoom-Handoff] Admin handoff. roomCode={}", roomCode);
         ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
 
@@ -65,7 +66,8 @@ public class ChatRoomStateServiceImpl implements ChatRoomStateService {
 
         // 버튼 상태 업데이트 브로드캐스트
         buttonUpdateService.sendButtonStateUpdate(roomCode, ChatRoomState.WAITING_FOR_ADMIN);
-        log.debug("Success to admin handoff process. roomCode={}, memberId={}", roomCode, chatRoom.getMemberId());
+        log.debug("[ChatRoom-Handoff] Success to admin handoff process. roomCode={}, memberId={}", roomCode,
+                chatRoom.getMemberId());
     }
 
     @Override
@@ -91,7 +93,9 @@ public class ChatRoomStateServiceImpl implements ChatRoomStateService {
 
         // 핸드오프 요청 메시지 브로드캐스트
         ChatPayload payload = new ChatPayload(
-                roomCode, handoffResponse.getMessageId(),
+                roomCode,
+                handoffResponse.getMessageId(),
+                handoffResponse.getSeq(),
                 handoffResponse.getSenderId(),
                 MessageSenderType.AI,
                 MessageSenderType.AI.getDescription(),
@@ -165,6 +169,7 @@ public class ChatRoomStateServiceImpl implements ChatRoomStateService {
         ChatPayload payload = new ChatPayload(
                 roomCode,
                 chatMessage.getId(),
+                chatMessage.getSeq(),
                 chatMessage.getSenderId(),
                 chatMessage.getSenderType(),
                 chatMessage.getSenderName(),
@@ -216,6 +221,7 @@ public class ChatRoomStateServiceImpl implements ChatRoomStateService {
         ChatPayload payload = new ChatPayload(
                 roomCode,
                 aiReturnResponse.getMessageId(),
+                aiReturnResponse.getSeq(),
                 aiReturnResponse.getSenderId(),
                 MessageSenderType.AI,
                 aiReturnResponse.getSenderName(),

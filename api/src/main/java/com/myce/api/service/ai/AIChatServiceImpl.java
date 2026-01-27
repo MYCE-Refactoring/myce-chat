@@ -11,7 +11,6 @@ import com.myce.api.mapper.ChatMessageMapper;
 import com.myce.api.service.AIChatService;
 import com.myce.api.service.ButtonUpdateService;
 import com.myce.api.service.ChatMessageService;
-import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.SendMessageService;
 import com.myce.api.util.ChatRoomStateSupporter;
 import com.myce.api.util.RoomCodeSupporter;
@@ -41,7 +40,6 @@ public class AIChatServiceImpl implements AIChatService {
     private final SendMessageService sendMessageService;
     private final ChatMessageService chatMessageService;
     private final ButtonUpdateService buttonUpdateService;
-    private final ChatReadStatusService readStatusService;
     private final AIChatGenerateService chatGenerateService;
     private final ChatRoomCacheRepository chatCacheRepository;
     private final ChatRoomRepository chatRoomRepository;
@@ -171,11 +169,10 @@ public class AIChatServiceImpl implements AIChatService {
         if (recentMessage == null) return;
 
         // readStatusJson에 AI 읽음 상태 업데이트
-        String latestMessageId = recentMessage.getId();
-        chatRoom.updateReadStatus(MessageReaderType.AI.name(),  latestMessageId);
+        Long latestMessageSeq = recentMessage.getSeq();
+        chatRoom.updateReadStatus(MessageReaderType.AI.name(), latestMessageSeq);
         chatRoomRepository.save(chatRoom);
 
-        log.debug("Update read state to AI. roomCode={}, messageId={}", roomCode, latestMessageId);
-        readStatusService.updateChatReadStatus(roomCode, MessageReaderType.AI);
+        log.debug("Update read state to AI. roomCode={}, messageSeq={}", roomCode, latestMessageSeq);
     }
 }

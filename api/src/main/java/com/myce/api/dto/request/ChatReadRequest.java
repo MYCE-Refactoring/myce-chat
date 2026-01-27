@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatReadRequest {
-    private String lastReadMessageId;
+    private Long lastReadSeq;
 }

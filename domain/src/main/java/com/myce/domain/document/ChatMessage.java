@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -22,11 +23,18 @@ import org.springframework.data.mongodb.core.mapping.Document;
     @CompoundIndex(name = "sender_time_idx", def = "{'senderId': 1, 'sentAt': -1}")
 })
 public class ChatMessage {
+
+    @Transient
+    public static final String SEQUENCE_NAME = "message_sequence";
+
     @Id
     private String id;
 
     @Indexed
     private String roomCode;
+
+    @Indexed
+    private Long seq;
 
     private MessageSenderType senderType;
 
@@ -51,7 +59,7 @@ public class ChatMessage {
     /**
      * 메시지 읽음 상태 (JSON 형태)
      */
-    private String readStatusJson;
+    private int unreadCount;
 
     /**
      * 메시지 편집 여부
@@ -74,10 +82,11 @@ public class ChatMessage {
      * MongoDB ObjectId를 미리 생성하여 ID 일관성 보장
      */
     @Builder
-    public ChatMessage(String roomCode, MessageSenderType senderType, Long senderId, String senderName,
-                      String content, boolean isSystemMessage, String messageType) {
+    public ChatMessage(String roomCode, MessageSenderType senderType, Long seq, Long senderId, String senderName,
+                      String content, boolean isSystemMessage, String messageType, int unreadCount) {
         this.id = new ObjectId().toString();
         this.roomCode = roomCode;
+        this.seq = seq;
         this.senderType = senderType;
         this.senderId = senderId;
         this.senderName = senderName;
@@ -86,8 +95,13 @@ public class ChatMessage {
         this.messageType = messageType;
         this.isEdited = false;
         this.isDeleted = false;
-        this.readStatusJson = "{}";
+        this.unreadCount = unreadCount;
         this.sentAt = LocalDateTime.now();
     }
 
+    public void decreaseUnreadCount() {
+        if (unreadCount > 0) {
+            unreadCount--;
+        }
+    }
 }

@@ -59,8 +59,8 @@ public class AIChatGenerateService {
         boolean shouldSuggestHuman = detectNeedForHumanAssistance(userMessage, recentMessages);
 
         // 5. AI 프롬프트 구성 (대기 상태 고려)
-        String aiResponse = getAiResponse(recentMessages, userContext, isWaitingForAdmin, shouldSuggestHuman, userMessage);
-
+//        String aiResponse = getAiResponse(recentMessages, userContext, isWaitingForAdmin, shouldSuggestHuman, userMessage);
+        String aiResponse = "임시 AI 메시지~";
         log.info("Success to create AI response with context. "
                 + "roomCode={}, userId={}, isWaitForAdmin={}, shouldSuggestHuman={}",
                 roomCode, userContext.userId(), isWaitingForAdmin, shouldSuggestHuman);
@@ -93,8 +93,8 @@ public class AIChatGenerateService {
         // AI 요약 프롬프트 구성 (사용자와 관리자 모두 볼 수 있도록 전문적이고 친화적으로)
         String summaryPrompt = aiChatPromptService
                 .createSummaryPromptWithContextAndLog(userContext, chatHistory);
-        String summary = chatClient.prompt(summaryPrompt).call().content();
-
+//        String summary = chatClient.prompt(summaryPrompt).call().content();
+        String summary = "임시 AI 메시지~";
         log.info("Success to create chat summary. roomCode={}, messageCount={}", roomCode, messages.size());
         return summary;
     }

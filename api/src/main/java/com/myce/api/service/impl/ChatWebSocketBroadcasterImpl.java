@@ -96,20 +96,18 @@ public class ChatWebSocketBroadcasterImpl implements ChatWebSocketBroadcaster {
     }
 
     @Override
-    public void broadcastUnreadCountUpdate(Long expoId, String roomCode, Long unreadCount) {
-        ChatUnReadCountPayload payload = new ChatUnReadCountPayload
-                (roomCode, MessageReaderType.ADMIN, unreadCount);
+    public void broadcastUnreadCountUpdate(String roomCode, MessageReaderType readerType, Long unreadCount) {
+        ChatUnReadCountPayload payload = new ChatUnReadCountPayload(roomCode, readerType, unreadCount);
 
         WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.UNREAD_COUNT_UPDATE, payload);
-        String destination = WebSocketDestination.getChatRoomStateUpdateDestination(expoId);
 
         try {
-            messagingTemplate.convertAndSend(destination, message);
-            log.debug("[WebSocketBroadcaster] Success to broadcast unread count. expoId={}, roomCode={}, "
-                    + "unreadCount={}", expoId, roomCode, unreadCount);
+            messagingTemplate.convertAndSend(WebSocketDestination.CHAT_ROOM_STATE, message);
+            log.debug("[WebSocketBroadcaster] Success to broadcast unread count. roomCode={}, unreadCount={}",
+                    roomCode, unreadCount);
         } catch (Exception e) {
-            log.debug("[WebSocketBroadcaster] Fail to broadcast unread count. expoId={}, roomCode={}, "
-                    + "unreadCount={}", expoId, roomCode, unreadCount);
+            log.debug("[WebSocketBroadcaster] Fail to broadcast unread count. roomCode={}, unreadCount={}",
+                    roomCode, unreadCount);
         }
     }
 

@@ -4,6 +4,7 @@ package com.myce.api.service;
 import com.myce.api.dto.ChatStatusResponse;
 import com.myce.api.dto.ConversationSummaryResponse;
 import com.myce.api.dto.response.ChatMessageResponse;
+import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 
 /**
@@ -18,9 +19,9 @@ public interface AIChatService {
 
     ConversationSummaryResponse getConversationSummaryForAdmin(String roomCode, String userRole);
 
-    ChatMessageResponse requestAdminHandoff(ChatRoom chatRoom);
-    
-    ChatMessageResponse cancelAdminHandoff(ChatRoom chatRoom);
+    ChatMessage requestAdminHandoff(ChatRoom chatRoom);
+
+    ChatMessage cancelAdminHandoff(ChatRoom chatRoom);
     
     ChatMessageResponse manageAIHandoff(ChatRoom chatRoom);
 }

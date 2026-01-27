@@ -8,23 +8,27 @@ import lombok.Getter;
 public class ChatPayload {
     private final String roomCode;
     private final String messageId;
+    private final Long seq;
     private final Long senderId;
     private final MessageSenderType senderType;
     private final String senderName;
     private final String content;
+    private final int unreadCount;
     private final LocalDateTime sentAt;
 
     private String adminCode;
     private String adminDisplayName;
 
-    public ChatPayload(String roomCode, String messageId, Long senderId, MessageSenderType senderType,
-            String senderName, String content, LocalDateTime sentAt) {
+    public ChatPayload(String roomCode, String messageId, Long seq, Long senderId, MessageSenderType senderType,
+            String senderName, String content, int unreadCount, LocalDateTime sentAt) {
         this.roomCode = roomCode;
         this.messageId = messageId;
+        this.seq = seq;
         this.senderId = senderId;
         this.senderType = senderType;
         this.senderName = senderName;
         this.content = content;
+        this.unreadCount = unreadCount;
         this.sentAt = sentAt;
     }
 

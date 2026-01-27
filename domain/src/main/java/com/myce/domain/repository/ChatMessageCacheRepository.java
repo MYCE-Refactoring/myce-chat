@@ -41,9 +41,9 @@ public interface ChatMessageCacheRepository {
      */
     Long getUnreadCount(String roomCode, Long memberId);
 
-    void setLastReadMessageId(String roomCode, Long memberId, String messageId);
+    void setLastReadSeq(String roomCode, Long memberId, Long messageSeq);
 
-    String getLastReadMessageId(String roomCode, Long memberId);
+    Long getLastReadSeq(String roomCode, Long memberId);
 
     /**
      * 전체 배지 카운트 증가

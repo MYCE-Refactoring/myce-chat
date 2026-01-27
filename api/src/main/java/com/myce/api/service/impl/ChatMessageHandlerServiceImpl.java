@@ -1,19 +1,14 @@
 package com.myce.api.service.impl;
 
 import com.myce.api.dto.message.ChatPayload;
-import com.myce.api.dto.message.ChatUnReadCountPayload;
 import com.myce.api.dto.message.WebSocketBaseMessage;
 import com.myce.api.dto.message.type.BroadcastType;
 import com.myce.api.dto.message.type.MessageReaderType;
 import com.myce.api.dto.message.type.SystemMessage;
-import com.myce.api.dto.message.type.WebSocketDestination;
-import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.api.exception.CustomWebSocketError;
 import com.myce.api.exception.CustomWebSocketException;
-import com.myce.api.mapper.ChatMessageMapper;
 import com.myce.api.service.ChatMessageHandlerService;
 import com.myce.api.service.ChatMessageService;
-import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.ChatUnreadService;
 import com.myce.api.service.ChatWebSocketBroadcaster;
 import com.myce.api.service.ai.AIChatGenerateService;
@@ -25,11 +20,12 @@ import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.ChatRoomState;
 import com.myce.domain.document.type.MessageSenderType;
+import com.myce.domain.repository.ChatMessageCacheRepository;
+import com.myce.domain.repository.ChatMessageRepository;
 import com.myce.domain.repository.ChatRoomCacheRepository;
 import com.myce.domain.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,58 +44,44 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomCacheRepository chatCacheRepository;
     private final ChatMessageService chatMessageService;
-    private final ChatReadStatusService readStatusService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatMessageCacheRepository chatMessageCacheRepository;
     /**
      * 사용자 메시지 플로우 처리
      * 메시지 수신 후 자동 읽음, AI 응답, 미읽음 카운트 업데이트 등을 처리합니다.
      */
     @Override
-    @Transactional
-    public void handleUserMessageFlow(Long memberId, Role role, ChatRoom chatRoom, String content, String messageId) {
+    public void handleUserMessageFlow(Long memberId, Role role, ChatRoom chatRoom, ChatMessage chatMessage) {
         String roomCode = chatRoom.getRoomCode();
         ChatRoomState currentState = chatRoom.getCurrentState();
-
+        String messageId = chatMessage.getId();
         log.info("[ChatMessageHandler] Handle user message flow. memberId={}, role={}, roomCode={}, messageId={}",
                 memberId, role, roomCode, messageId);
-        if (RoomCodeSupporter.isPlatformRoom(roomCode) &&
-                (currentState.equals(ChatRoomState.AI_ACTIVE) || currentState.equals(ChatRoomState.ADMIN_ACTIVE))) {
-            // AI 응답 처리 (필요시)
-            handleAIResponse(chatRoom, content);
+
+        if (chatMessage.getSenderType().equals(MessageSenderType.USER) && isNeedAiResponse(roomCode, currentState)) {
+            handleAutoReadLogic(chatRoom, memberId, chatMessage); // 자동 읽음 처리
+            handleAIResponse(chatRoom, chatMessage.getContent()); // AI 응답 처리
         } else {
-            // 자동 읽음 처리 (필요시)
-            handleAutoReadLogic(memberId, role, messageId, chatRoom);
-
-            // 미읽음 카운트 업데이트 (박람회 관리자 용)
-            handleUnreadCountUpdate(roomCode);
+            handleUnreadCountUpdate(roomCode); // 미읽음 카운트 업데이트
         }
-
     }
 
-    @Override
-    @Transactional
-    public void handleAutoReadLogic(Long memberId, Role role, String messageId, ChatRoom currentRoom) {
-        String roomCode = currentRoom.getRoomCode();
-        ChatRoomState state = currentRoom.getCurrentState();
+    public void handleAutoReadLogic(ChatRoom chatRoom, Long memberId, ChatMessage chatMessage) {
+        String roomCode = chatRoom.getRoomCode();
+        String messageId = chatMessage.getId();
+        Long messageSeq = chatMessage.getSeq();
+        log.info("[ChatMessageHandler] Start auto read logic. memberId={}, messageSeq={}, roomCode={}",
+                memberId, messageSeq, roomCode);
 
-        log.info("[ChatMessageHandler] Start auto read logic. memberId={}, messageId={}, roomCode={}",
-                memberId, memberId, roomCode);
+        chatMessage.decreaseUnreadCount();
+        MessageReaderType reader = MessageReaderType.AI;
+        chatRoom.updateReadStatus(reader.name(), messageSeq);
+        chatRoomRepository.save(chatRoom);
+        chatMessageRepository.updateUnreadCountEqualSeq(roomCode, chatMessage.getId());
+        broadcaster.broadcastReadStatusUpdate(roomCode, messageSeq, memberId, reader);
 
-        readStatusService.markAsReadForMember(roomCode, messageId, memberId, role);
-
-        // 플랫폼 관리자가 메시지를 보낸 경우 → 해당 유저의 미읽음 메시지도 자동 읽음 처리
-        if (Role.PLATFORM_ADMIN.equals(role) && state.equals(ChatRoomState.ADMIN_ACTIVE)) {
-            Long platformUserId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
-
-            // 유저의 미읽은 메시지들을 모두 읽음 처리
-            readStatusService.markAsReadForMember(roomCode, messageId, platformUserId, Role.USER);
-        }
-
-        // 읽음 상태 변경을 WebSocket으로 브로드캐스트
-        broadcaster.broadcastReadStatusUpdate(roomCode, messageId, memberId, MessageReaderType.USER);
-
-        log.info("[ChatMessageHandler] Success to auto read logic. memberId={}, messageId={}, roomCode={}",
-                memberId, memberId, roomCode);
+        log.info("[ChatMessageHandler] Success to auto read logic. memberId={}, messageSeq={}, roomCode={}",
+                memberId, messageSeq, roomCode);
     }
 
     /**
@@ -108,25 +90,27 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
      */
     @Override
     public void handleUnreadCountUpdate(String roomCode) {
-        try {
-            Long expoId = RoomCodeSupporter.extractExpoIdFromAdminRoomCode(roomCode);
-            if (expoId == null) return;
-
+        if (RoomCodeSupporter.isPlatformRoom(roomCode)) {
             ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
-            if (chatRoom == null) return;
+            if (chatRoom == null) {
+                return;
+            }
+
+            Long unreadCount = chatUnreadService
+                    .getUnreadCount(roomCode, chatRoom.getReadStatus(), 0L, Role.PLATFORM_ADMIN, null);
+            broadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.ADMIN, unreadCount);
+            log.debug("[ChatMessageHandler] Success to update unread count (platform). roomCode: {}, unreadCount: {}",
+                    roomCode, unreadCount);
+        } else {
+            Long expoId = RoomCodeSupporter.extractExpoIdFromAdminRoomCode(roomCode);
+            ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
 
             // 관리자가 마지막으로 읽은 메시지 이후의 USER 메시지만 계산
             Long unreadCount = chatUnreadService
-                    .getUnreadCountForViewer(roomCode, chatRoom.getReadStatus(), 0L, Role.EXPO_ADMIN);
-
-            broadcaster.broadcastUnreadCountUpdate(expoId, roomCode, unreadCount);
-
-            log.debug("Success to update unread count. roomCode: {}, expoId: {}, unreadCount: {}",
-                roomCode, expoId, unreadCount);
-
-        } catch (Exception unreadUpdateError) {
-            log.warn("Fail to update unread count. roomCode: {}, error: {}",
-                roomCode, unreadUpdateError.getMessage());
+                    .getUnreadCount(roomCode, chatRoom.getReadStatus(), 0L, Role.EXPO_ADMIN, null);
+            broadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.ADMIN, unreadCount);
+            log.debug("[ChatMessageHandler] Success to update unread count. roomCode: {}, expoId: {}, unreadCount: {}",
+                    roomCode, expoId, unreadCount);
         }
     }
 
@@ -198,68 +182,53 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
      * AI 응답 처리 (내부용)
      */
     private void handleAIResponse(ChatRoom chatRoom, String content) {
-        ChatMessageResponse aiResponse = getAIMessage(chatRoom, content);
-
         String roomCode = chatRoom.getRoomCode();
-        if (aiResponse != null) {
-            ChatPayload payload = new ChatPayload(
-                    chatRoom.getRoomCode(),
-                    aiResponse.getMessageId(),
-                    aiResponse.getSenderId(),
-                    MessageSenderType.AI,
-                    MessageSenderType.AI.getDescription(),
-                    aiResponse.getContent(),
-                    aiResponse.getSentAt()
-            );
-            WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.AI_MESSAGE, payload);
-            broadcaster.sendMessage(roomCode, message);
+        ChatRoomState currentState = chatRoom.getCurrentState();
 
-            log.debug("AI 메시지 브로드캐스트 완료 - roomCode: {}", roomCode);
-        }
-    }
+        log.debug("[ChatMessageHandler] Handle ai response. roomCode={}, state={}", roomCode, currentState);
+        ChatMessage chatMessage = getNewAiMessageForMember(roomCode, content);
+        chatMessageCacheRepository.addMessageToCache(roomCode, chatMessage);
 
-    private ChatMessageResponse getAIMessage(ChatRoom chatRoom, String content) {
-        String roomCode = chatRoom.getRoomCode();
-        ChatRoom currentRoom = chatRoomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new CustomException(CustomErrorCode.CHAT_ROOM_NOT_EXIST));
+        String messageId = chatMessage.getId();
+        Long messageSeq = chatMessage.getSeq();
+        chatRoom.updateLastMessageInfo(messageId, chatMessage.getContent());
 
-        ChatRoomState currentState = currentRoom.getCurrentState();
-        if (!(currentState.equals(ChatRoomState.AI_ACTIVE) ||
-                currentState.equals(ChatRoomState.WAITING_FOR_ADMIN))) return null;
-
-        log.debug("AI 응답 처리 시작 - roomId: {}, 현재상태: {}", roomCode, currentState);
-        return sendAIMessage(chatRoom, content);
-    }
-
-    public ChatMessageResponse sendAIMessage(ChatRoom chatRoom, String userMessage) {
-        String roomCode = chatRoom.getRoomCode();
-
-        String aiResponse = chatGenerateService.generateAIResponse(userMessage, roomCode);
-        ChatMessage chatMessage = chatMessageService.saveAIChatMessage(roomCode, aiResponse);
-        chatRoom.updateLastMessageInfo(chatMessage.getId(), chatMessage.getContent());
-
-        // AI가 사용자 메시지를 "읽음" 처리 - 읽음 상태 업데이트 브로드캐스트
-        sendAIReadStatusUpdate(chatRoom);
-
-        return ChatMessageMapper.toResponse(chatMessage);
-    }
-
-    public void sendAIReadStatusUpdate(ChatRoom chatRoom) {
-        String roomCode = chatRoom.getRoomCode();
-
-        // 가장 최근 메시지 ID 조회
-        ChatMessage recentMessages = chatMessageService.getRecentMessage(roomCode);
-        if (recentMessages == null) return;
-
-        // readStatusJson에 AI 읽음 상태 업데이트
-        String latestMessageId = recentMessages.getId();
-        chatRoom.updateReadStatus(MessageReaderType.AI.name(),  latestMessageId);
+        // AI가 사용자 메시지를 "읽음" 처리
+        chatRoom.updateReadStatus(MessageReaderType.AI.name(), messageSeq);
         chatRoomRepository.save(chatRoom);
+        log.debug("[ChatMessageHandler] Update read state to AI. roomCode={}, messageSeq={}", roomCode, messageSeq);
 
-        log.debug("Update read state to AI. roomCode={}, messageId={}", roomCode, latestMessageId);
-        ChatUnReadCountPayload readStatusDto = new ChatUnReadCountPayload(roomCode, MessageReaderType.AI, 0);
-        WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.READ_STATUS_UPDATE, readStatusDto);
-        String destination = WebSocketDestination.getSendChatMessageDestination(roomCode);
-        messagingTemplate.convertAndSend(destination, message);
+        // 읽음 상태 업데이트 브로드캐스트
+        sendAiMessage(roomCode, chatMessage);
+
+        log.debug("[ChatMessageHandler] Success to send ai response. roomCode={}, messageId={}", roomCode, messageId);
     }
+
+    private void sendAiMessage(String roomCode, ChatMessage chatMessage) {
+        ChatPayload payload = new ChatPayload(
+                roomCode,
+                chatMessage.getId(),
+                chatMessage.getSeq(),
+                chatMessage.getSenderId(),
+                MessageSenderType.AI,
+                MessageSenderType.AI.getDescription(),
+                chatMessage.getContent(),
+                chatMessage.getUnreadCount(),
+                chatMessage.getSentAt()
+        );
+        WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.AI_MESSAGE, payload);
+        broadcaster.sendMessage(roomCode, message);
+        broadcaster.broadcastRoomPreviewUpdate(roomCode, chatMessage);
+    }
+
+    private boolean isNeedAiResponse(String roomCode, ChatRoomState currentRoomStatus) {
+        return RoomCodeSupporter.isPlatformRoom(roomCode) &&
+                (currentRoomStatus.equals(ChatRoomState.AI_ACTIVE) || currentRoomStatus.equals(ChatRoomState.WAITING_FOR_ADMIN));
+    }
+
+    private ChatMessage getNewAiMessageForMember(String roomCode, String userMessage) {
+        String aiResponse = chatGenerateService.generateAIResponse(userMessage, roomCode);
+        return chatMessageService.saveAIChatMessage(roomCode, aiResponse);
+    }
+
 }

@@ -21,7 +21,9 @@ public enum MessageSenderType {
      * - 박람회 관리자 (Super Admin, AdminCode)
      */
     ADMIN("관리자"),
-    
+
+    PLATFORM_ADMIN("플랫폼 관리자"),
+
     /**
      * 시스템
      * - 시스템에서 자동 생성하는 메시지용

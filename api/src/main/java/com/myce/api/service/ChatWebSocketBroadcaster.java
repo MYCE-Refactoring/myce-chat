@@ -27,12 +27,14 @@ public interface ChatWebSocketBroadcaster {
     /**
      * 읽음 상태 업데이트 브로드캐스트
      */
-    void broadcastReadStatusUpdate(String roomId, String messageId, Long readBy, MessageReaderType readerType);
+    void broadcastReadStatusUpdate(String roomId, Long messageSeq, Long readBy, MessageReaderType readerType);
 
     /**
      * 미읽음 카운트 업데이트 브로드캐스트 (박람회 관리자용)
      */
     void broadcastUnreadCountUpdate(String roomCode, MessageReaderType readerType, Long unreadCount);
+
+    void broadcastRoomPreviewUpdate(String roomCode, com.myce.domain.document.ChatMessage message);
 
     /**
      * 담당자 배정 브로드캐스트

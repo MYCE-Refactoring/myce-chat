@@ -6,6 +6,7 @@ import com.myce.api.dto.message.type.BroadcastType;
 import com.myce.api.dto.message.type.MessageReaderType;
 import com.myce.api.service.ChatReadStatusService;
 import com.myce.api.service.ChatWebSocketBroadcaster;
+import com.myce.api.util.ChatCacheKeySupporter;
 import com.myce.api.util.ChatMessageTypeUtil;
 import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
@@ -55,12 +56,13 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        log.debug("[ChatReadStatusService] Redis unread count reset for admin: {} in room: {}", memberId, roomCode);
-
         MessageReaderType readerType = ChatMessageTypeUtil.getReaderType(roomCode, memberId, role, loginType);
+        Long cacheMemberId = ChatCacheKeySupporter.resolveCacheMemberId(readerType, memberId);
+        log.debug("[ChatReadStatusService] Redis unread count reset. memberId={}, cacheMemberId={}, roomCode={}",
+                memberId, cacheMemberId, roomCode);
         if (lastReadSeq != null) {
             chatRoom.updateReadStatus(readerType.name(), lastReadSeq);
-            resetAndRecalculateBadgeCount(roomCode, memberId);
+            resetAndRecalculateBadgeCount(roomCode, cacheMemberId);
         }
         chatRoomRepository.save(chatRoom);
 
@@ -68,6 +70,11 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
                 roomCode, memberId, role, loginType);
         if (lastReadSeq != null) {
             decreaseUnreadCount(roomCode, readerSenderType, lastReadSeq);
+        }
+
+        if (lastReadSeq != null) {
+            webSocketBroadcaster.broadcastReadStatusUpdate(roomCode, lastReadSeq, memberId, readerType);
+            webSocketBroadcaster.broadcastUnreadCountUpdate(roomCode, readerType, 0L);
         }
 
         log.debug("[ChatReadStatusService] Mark as read for member. roomCode={}, memberId={}, lastReadSeq={}",
@@ -91,16 +98,18 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        log.debug("[ChatReadStatusService] Redis unread count reset for admin: {} in room: {}", memberId, roomCode);
+        MessageReaderType readerType = ChatMessageTypeUtil.getReaderType(roomCode, memberId, role, loginType);
+        Long cacheMemberId = ChatCacheKeySupporter.resolveCacheMemberId(readerType, memberId);
+        log.debug("[ChatReadStatusService] Redis unread count reset. roomCode={}, adminId={}, cacheMemberId={}",
+                roomCode, memberId, cacheMemberId);
 
         // 마지막 읽은 메시지 seq Redis 저장
         if (lastReadSeq != null) {
-            chatMessageCacheRepository.setLastReadSeq(roomCode, memberId, lastReadSeq);
-            resetAndRecalculateBadgeCount(roomCode, memberId);
+            chatMessageCacheRepository.setLastReadSeq(roomCode, cacheMemberId, lastReadSeq);
+            resetAndRecalculateBadgeCount(roomCode, cacheMemberId);
         }
 
         // 마지막 메시지 seq를 기준으로 읽음 처리
-        MessageReaderType readerType = ChatMessageTypeUtil.getReaderType(roomCode, memberId, role, loginType);
         if (lastReadSeq != null) {
             chatRoom.updateReadStatus(readerType.name(), lastReadSeq);
         }
@@ -116,7 +125,8 @@ public class ChatReadStatusServiceImpl implements ChatReadStatusService {
         }
 
         // WebSocket을 통해 상대방(사용자)에게 읽음 상태 변경 알림
-        webSocketBroadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.USER, 0L);
+        webSocketBroadcaster.broadcastReadStatusUpdate(roomCode, lastReadSeq, memberId, MessageReaderType.ADMIN);
+        webSocketBroadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.ADMIN, 0L);
     }
 
     private void resetAndRecalculateBadgeCount(String roomCode, Long memberId) {

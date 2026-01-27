@@ -78,7 +78,7 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
         chatRoom.updateReadStatus(reader.name(), messageSeq);
         chatRoomRepository.save(chatRoom);
         chatMessageRepository.updateUnreadCountEqualSeq(roomCode, chatMessage.getId());
-        broadcaster.broadcastReadStatusUpdate(roomCode, messageId, memberId, reader);
+        broadcaster.broadcastReadStatusUpdate(roomCode, messageSeq, memberId, reader);
 
         log.info("[ChatMessageHandler] Success to auto read logic. memberId={}, messageSeq={}, roomCode={}",
                 memberId, messageSeq, roomCode);
@@ -91,7 +91,16 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
     @Override
     public void handleUnreadCountUpdate(String roomCode) {
         if (RoomCodeSupporter.isPlatformRoom(roomCode)) {
+            ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
+            if (chatRoom == null) {
+                return;
+            }
 
+            Long unreadCount = chatUnreadService
+                    .getUnreadCount(roomCode, chatRoom.getReadStatus(), 0L, Role.PLATFORM_ADMIN, null);
+            broadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.ADMIN, unreadCount);
+            log.debug("[ChatMessageHandler] Success to update unread count (platform). roomCode: {}, unreadCount: {}",
+                    roomCode, unreadCount);
         } else {
             Long expoId = RoomCodeSupporter.extractExpoIdFromAdminRoomCode(roomCode);
             ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode).orElse(null);
@@ -204,10 +213,12 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
                 MessageSenderType.AI,
                 MessageSenderType.AI.getDescription(),
                 chatMessage.getContent(),
+                chatMessage.getUnreadCount(),
                 chatMessage.getSentAt()
         );
         WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.AI_MESSAGE, payload);
         broadcaster.sendMessage(roomCode, message);
+        broadcaster.broadcastRoomPreviewUpdate(roomCode, chatMessage);
     }
 
     private boolean isNeedAiResponse(String roomCode, ChatRoomState currentRoomStatus) {

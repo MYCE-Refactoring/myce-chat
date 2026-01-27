@@ -108,7 +108,7 @@ public class AIChatServiceImpl implements AIChatService {
     }
 
     @Override
-    public ChatMessageResponse requestAdminHandoff(ChatRoom chatRoom) {
+    public ChatMessage requestAdminHandoff(ChatRoom chatRoom) {
         String roomCode = chatRoom.getRoomCode();
         ChatMessage savedMessage = chatMessageService
                 .saveAIChatMessage(roomCode, SystemMessage.AI_INVITE_MESSAGE);
@@ -116,11 +116,11 @@ public class AIChatServiceImpl implements AIChatService {
         chatRoom.startWaitingForAdmin();
         chatCacheRepository.cacheChatRoom(roomCode, chatRoom);
 
-        return ChatMessageMapper.toResponse(savedMessage);
+        return savedMessage;
     }
 
     @Override
-    public ChatMessageResponse cancelAdminHandoff(ChatRoom chatRoom) {
+    public ChatMessage cancelAdminHandoff(ChatRoom chatRoom) {
         String roomCode = chatRoom.getRoomCode();
         chatRoom.stopWaitingForAdmin(); // waitingForAdmin = false
         chatRoom.transitionToState(ChatRoomState.AI_ACTIVE); // currentState = AI_ACTIVE
@@ -129,7 +129,7 @@ public class AIChatServiceImpl implements AIChatService {
         ChatMessage savedMessage = chatMessageService.saveAIChatMessage(roomCode, SystemMessage.CANCEL_HANDOFF);
 
         log.info("Success to cancel admin handoff. roomCode={}", roomCode);
-        return ChatMessageMapper.toResponse(savedMessage);
+        return savedMessage;
     }
 
     @Override

@@ -6,12 +6,14 @@ import com.myce.api.dto.message.ChatPayload;
 import com.myce.api.dto.message.ChatRoomStateInfo;
 import com.myce.api.dto.message.WebSocketChatMessage;
 import com.myce.api.dto.message.type.BroadcastType;
+import com.myce.api.dto.message.type.MessageReaderType;
 import com.myce.api.dto.message.type.TransitionReason;
 import com.myce.api.dto.message.type.WebSocketMessagePayload;
 import com.myce.api.dto.request.SendMessageRequest;
 import com.myce.api.exception.CustomWebSocketError;
 import com.myce.api.exception.CustomWebSocketException;
 import com.myce.api.service.ChatMessageHandlerService;
+import com.myce.api.service.ChatUnreadService;
 import com.myce.api.service.ChatWebSocketBroadcaster;
 import com.myce.api.service.SendMessageService;
 import com.myce.api.service.client.ExpoClient;
@@ -40,6 +42,7 @@ public class SendMessageServiceImpl implements SendMessageService {
     private final ChatWebSocketBroadcaster broadcaster;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageHandlerService messageHandler;
+    private final ChatUnreadService chatUnreadService;
     private final ChatMessageSaveComponent messageSaveComponent;
     private final ChatAdminAssignmentComponent adminAssignmentComponent;
 
@@ -59,6 +62,7 @@ public class SendMessageServiceImpl implements SendMessageService {
         try {
             // 2. 메시지 전송
             broadcastMessage(chatRoom, chatMessage);
+            broadcaster.broadcastRoomPreviewUpdate(roomCode, chatMessage);
             // 3. 사용자 메시지 플로우 처리 (AI 응답, 자동 읽음, 미읽음 업데이트)
             messageHandler.handleUserMessageFlow(memberId, role, chatRoom, chatMessage);
         } catch (Exception e) {
@@ -148,6 +152,19 @@ public class SendMessageServiceImpl implements SendMessageService {
 
         // 7. 관리자 메시지 브로드캐스트
         broadcaster.broadcastAdminMessage(roomCode, payload, chatRoom, adminCode);
+        broadcaster.broadcastRoomPreviewUpdate(roomCode, chatMessage);
+
+        Long userId = chatRoom.getMemberId();
+        if (userId != null) {
+            long unreadCount = chatUnreadService.getUnreadCount(
+                    roomCode,
+                    chatRoom.getReadStatus(),
+                    userId,
+                    Role.USER,
+                    LoginType.MEMBER
+            );
+            broadcaster.broadcastUnreadCountUpdate(roomCode, MessageReaderType.USER, unreadCount);
+        }
     }
 
     private void broadcastSystemMessage(String roomCode, ChatRoomStateInfo roomState, ChatMessage chatMessage) {
@@ -171,6 +188,7 @@ public class SendMessageServiceImpl implements SendMessageService {
                 chatMessage.getSenderType(),
                 chatMessage.getSenderName(),
                 chatMessage.getContent(),
+                chatMessage.getUnreadCount(),
                 chatMessage.getSentAt()
         );
     }

@@ -102,13 +102,18 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         // Redis 캐시 확인
         if (page == 0 && size <= 50) {
             chatMessages = chatMessageCacheRepository.getCachedRecentMessages(roomCode, size);
-            if (chatMessages != null && !chatMessages.isEmpty() ) {
-                Map<String, Long> readStatus = chatRoom.getReadStatus();
-                for (ChatMessage chatMessage : chatMessages) {
-                    log.debug("@@@@@@@@ message check. messageSeq={}, isRead={}", chatMessage.getSeq(), chatMessage.getUnreadCount());
-                    if (chatMessage.getUnreadCount() > 0 && unreadService.isReadMessage(chatMessage, readStatus)) {
-                        chatMessage.decreaseUnreadCount();
-                        log.debug("@@@@@@@@@@@ decrease Unread message. messageSeq={}", chatMessage.getSeq());
+            if (chatMessages != null && !chatMessages.isEmpty()) {
+                if (chatMessages.size() < size) {
+                    // 캐시가 부족하면 DB에서 다시 조회 (스크롤/hasMore 오류 방지)
+                    chatMessages = null;
+                } else {
+                    Map<String, Long> readStatus = chatRoom.getReadStatus();
+                    for (ChatMessage chatMessage : chatMessages) {
+                        log.debug("@@@@@@@@ message check. messageSeq={}, isRead={}", chatMessage.getSeq(), chatMessage.getUnreadCount());
+                        if (chatMessage.getUnreadCount() > 0 && unreadService.isReadMessage(chatMessage, readStatus)) {
+                            chatMessage.decreaseUnreadCount();
+                            log.debug("@@@@@@@@@@@ decrease Unread message. messageSeq={}", chatMessage.getSeq());
+                        }
                     }
                 }
             }

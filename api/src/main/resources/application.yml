@@ -3,11 +3,12 @@ server:
 
 spring:
   application:
-    name: api
+    name: chat-api
   config:
     import:
       - optional:classpath:application-domain.yml
       - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
   # AI Configuration
   ai:
     bedrock:
@@ -25,9 +26,17 @@ internal:
   auth:
     value: local-gateway
   core:
-    url: http://localhost:8082
+    url: lb://CORE-INTERNAL
     value: internal-request
 
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8084/eureka
+  instance:
+    prefer-ip-address: true
 
 scheduler:
   admin-timeout: 0 */30 * * * *

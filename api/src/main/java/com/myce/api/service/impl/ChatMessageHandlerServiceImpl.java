@@ -82,17 +82,16 @@ public class ChatMessageHandlerServiceImpl implements ChatMessageHandlerService 
         String roomCode = currentRoom.getRoomCode();
         ChatRoomState state = currentRoom.getCurrentState();
 
-        log.info("[ChatMessageHandler] Start auto read logic. memberId={}, messageId={}, roomCode={}",
-                memberId, memberId, roomCode);
+        log.info( "[ChatMessageHandler] Start auto read logic. memberId={}, messageId={}, roomCode={}", memberId, memberId, roomCode );
 
-        readStatusService.markAsReadForMember(roomCode, messageId, memberId, role);
+        readStatusService.markAsReadForMember( roomCode, messageId, memberId, role );
 
         // 플랫폼 관리자가 메시지를 보낸 경우 → 해당 유저의 미읽음 메시지도 자동 읽음 처리
-        if (Role.PLATFORM_ADMIN.equals(role) && state.equals(ChatRoomState.ADMIN_ACTIVE)) {
-            Long platformUserId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
+        if (Role.PLATFORM_ADMIN.equals( role ) && state.equals( ChatRoomState.ADMIN_ACTIVE )) {
+            Long platformUserId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode( roomCode );
 
             // 유저의 미읽은 메시지들을 모두 읽음 처리
-            readStatusService.markAsReadForMember(roomCode, messageId, platformUserId, Role.USER);
+            readStatusService.markAsReadForMember( roomCode, messageId, platformUserId, Role.USER );
         }
 
         // 읽음 상태 변경을 WebSocket으로 브로드캐스트

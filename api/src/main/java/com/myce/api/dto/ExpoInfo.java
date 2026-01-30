@@ -10,5 +10,6 @@ public class ExpoInfo {
     private String title;
     private String location;
     private String locationDetail;
+    private Long ownerMemberId;
     List<TicketInfo> ticketInfos;
 }

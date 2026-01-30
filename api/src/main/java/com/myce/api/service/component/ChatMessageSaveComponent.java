@@ -3,6 +3,7 @@ package com.myce.api.service.component;
 import com.myce.api.dto.SenderInfo;
 import com.myce.api.service.ChatMessageService;
 import com.myce.api.service.client.ExpoClient;
+import com.myce.api.util.ChatCacheKeySupporter;
 import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
 import com.myce.common.exception.CustomException;
@@ -10,7 +11,6 @@ import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
-import com.myce.domain.document.type.ChatRoomState;
 import com.myce.domain.document.type.MessageSenderType;
 import com.myce.domain.repository.ChatMessageCacheRepository;
 import com.myce.domain.repository.ChatRoomCacheRepository;
@@ -68,40 +68,26 @@ public class ChatMessageSaveComponent {
      * 채팅방 타입에 따라 수신자 결정
      */
     private Long getReceiverId(ChatRoom chatRoom, Long senderId, Role senderRole) {
-        String roomCode = chatRoom.getId();
+        String roomCode = chatRoom.getRoomCode();
         if (RoomCodeSupporter.isPlatformRoom(roomCode)) {
             Long roomUserId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
 
             if (Role.PLATFORM_ADMIN.equals(senderRole)) {
                 return roomUserId;
             } else {
-                // 사용자가 보낸 경우 → 현재 활성 플랫폼 관리자가 수신자
-                if (chatRoom.getCurrentState().equals(ChatRoomState.ADMIN_ACTIVE)) {
-                    // ADMIN_ACTIVE 상태일 때 현재 담당 관리자의 ID 반환
-                    String currentAdminCode = chatRoom.getCurrentAdminCode();
-                    if ("PLATFORM_ADMIN".equals(currentAdminCode)) {
-                        // 플랫폼 관리자 중 첫 번째 활성 관리자 찾기 (임시로 null 반환)
-                        // TODO: 실제 활성 플랫폼 관리자 ID를 찾는 로직 구현 필요
-                        return null;
-                    }
-                }
-                return null; // AI 상태이거나 관리자를 찾을 수 없는 경우
+                // 사용자 → 관리자: 관리자 그룹 공용 unread 처리
+                return ChatCacheKeySupporter.ADMIN_GROUP_MEMBER_ID;
             }
         } else if (RoomCodeSupporter.isAdminRoom(roomCode)) {
             // 박람회 채팅: admin-{expoId}-{userId}
-            Long expoId = RoomCodeSupporter.extractExpoIdFromAdminRoomCode(roomCode);
             Long memberId = RoomCodeSupporter.extractMemberIdFromRoomCode(roomCode);
 
-            if (Role.EXPO_ADMIN.equals(senderRole)) {
+            if (Role.EXPO_ADMIN.equals(senderRole) || Role.EXPO_SUPER_ADMIN.equals(senderRole)) {
                 // 관리자가 보낸 경우 → 참가자가 수신자
                 return memberId;
             } else {
-                // 사용자가 보낸 경우 → 현재 배정된 관리자가 수신자
-                // ChatRoom에서 현재 배정된 관리자 정보 확인
-                if (chatRoom.hasAssignedAdmin()) {
-                    return null;
-                }
-                return null;
+                // 사용자 → 관리자: 관리자 그룹 공용 unread 처리
+                return ChatCacheKeySupporter.ADMIN_GROUP_MEMBER_ID;
             }
         }
 
@@ -130,28 +116,36 @@ public class ChatMessageSaveComponent {
     }
 
     private SenderInfo getSenderInfoForPlatformRoom(String roomCode, long memberId, Role role) {
-        if (Role.PLATFORM_ADMIN.equals(role)) {
-            return new SenderInfo(role, MessageSenderType.ADMIN, Role.PLATFORM_ADMIN.getDisplayName());
-        } else {
-            Long participantId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
-            if (participantId != memberId) throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
-
+        Long participantId = RoomCodeSupporter.extractMemberIdFromPlatformRoomCode(roomCode);
+        if (participantId == memberId) {
             return new SenderInfo(Role.USER, MessageSenderType.USER, "사용자명 넣기");
         }
+
+        if (Role.PLATFORM_ADMIN.equals(role)) {
+            return new SenderInfo(role, MessageSenderType.PLATFORM_ADMIN, role.getDisplayName());
+        }
+
+        throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
     }
 
     private SenderInfo getSenderInfoForExpoRoom(String roomCode, long memberId, Role role, LoginType loginType) {
         Long expoId = RoomCodeSupporter.extractExpoIdFromRoomCode(roomCode);
         Long participantId = RoomCodeSupporter.extractMemberIdFromRoomCode(roomCode);
 
-        if (LoginType.ADMIN_CODE.equals(loginType) && expoClient.checkAdminExpoAccessible(expoId, memberId)) {
-            return new SenderInfo(role, MessageSenderType.ADMIN, role.getDisplayName());
-        } if (participantId == memberId) {
+        if (participantId == memberId) {
             return new SenderInfo(Role.USER, MessageSenderType.USER, "사용자명 넣기");
-        } else if (Role.EXPO_ADMIN.equals(role) && expoClient.checkMemberExpoOwner(expoId, memberId)) {
-            return new SenderInfo(role, MessageSenderType.ADMIN, role.getDisplayName());
-        } else {
-            throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
         }
+
+        if (LoginType.ADMIN_CODE.equals(loginType) && expoClient.checkAdminExpoAccessible(expoId, memberId)) {
+            Role adminRole = role != null && !Role.USER.equals(role) ? role : Role.EXPO_ADMIN;
+            return new SenderInfo(adminRole, MessageSenderType.ADMIN, adminRole.getDisplayName());
+        }
+
+        if ((Role.EXPO_ADMIN.equals(role) || Role.EXPO_SUPER_ADMIN.equals(role))
+                && expoClient.checkMemberExpoOwner(expoId, memberId)) {
+            return new SenderInfo(role, MessageSenderType.ADMIN, role.getDisplayName());
+        }
+
+        throw new CustomException(CustomErrorCode.CHAT_ROOM_ACCESS_DENIED);
     }
 }

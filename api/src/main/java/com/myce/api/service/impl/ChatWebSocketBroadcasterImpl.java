@@ -3,6 +3,7 @@ package com.myce.api.service.impl;
 import com.myce.api.dto.message.AdminAssignmentPayload;
 import com.myce.api.dto.message.ChatPayload;
 import com.myce.api.dto.message.ChatReadStatusPayload;
+import com.myce.api.dto.message.ChatRoomPreviewPayload;
 import com.myce.api.dto.message.ChatRoomStateInfo;
 import com.myce.api.dto.message.ChatUnReadCountPayload;
 import com.myce.api.dto.message.WebSocketBaseMessage;
@@ -14,6 +15,7 @@ import com.myce.api.dto.message.type.TransitionReason;
 import com.myce.api.dto.message.type.WebSocketDestination;
 import com.myce.api.service.ChatWebSocketBroadcaster;
 import com.myce.api.util.ChatRoomStateSupporter;
+import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -81,35 +83,62 @@ public class ChatWebSocketBroadcasterImpl implements ChatWebSocketBroadcaster {
     }
 
     @Override
-    public void broadcastReadStatusUpdate(String roomCode, String messageId, Long readBy, MessageReaderType readerType) {
-        ChatReadStatusPayload payload = new ChatReadStatusPayload(messageId, readBy, readerType, LocalDateTime.now());
+    public void broadcastReadStatusUpdate(String roomCode, Long messageSeq, Long readBy, MessageReaderType readerType) {
+        ChatReadStatusPayload payload = new ChatReadStatusPayload(messageSeq, readBy, readerType, LocalDateTime.now());
         WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.READ_STATUS_UPDATE, payload);
 
         try {
             sendMessage(roomCode, message);
-            log.debug("[WebSocketBroadcaster] Success to broadcast read status. roomCode={}, messageId={}, readBy={}",
-                    roomCode, messageId, readBy);
+            log.debug("[WebSocketBroadcaster] Success to broadcast read status. roomCode={}, messageSeq={}, readBy={}",
+                    roomCode, messageSeq, readBy);
         } catch (Exception e) {
-            log.debug("[WebSocketBroadcaster] Fail to broadcast read status. roomCode={}, messageId={}, readBy={}",
-                    roomCode, messageId, readBy);
+            log.debug("[WebSocketBroadcaster] Fail to broadcast read status. roomCode={}, messageSeq={}, readBy={}",
+                    roomCode, messageSeq, readBy);
         }
     }
 
     @Override
-    public void broadcastUnreadCountUpdate(Long expoId, String roomCode, Long unreadCount) {
-        ChatUnReadCountPayload payload = new ChatUnReadCountPayload
-                (roomCode, MessageReaderType.ADMIN, unreadCount);
+    public void broadcastUnreadCountUpdate(String roomCode, MessageReaderType readerType, Long unreadCount) {
+        ChatUnReadCountPayload payload = new ChatUnReadCountPayload(roomCode, readerType, unreadCount);
 
         WebSocketBaseMessage message = new WebSocketBaseMessage(BroadcastType.UNREAD_COUNT_UPDATE, payload);
-        String destination = WebSocketDestination.getChatRoomStateUpdateDestination(expoId);
 
         try {
-            messagingTemplate.convertAndSend(destination, message);
-            log.debug("[WebSocketBroadcaster] Success to broadcast unread count. expoId={}, roomCode={}, "
-                    + "unreadCount={}", expoId, roomCode, unreadCount);
+            messagingTemplate.convertAndSend(WebSocketDestination.CHAT_ROOM_STATE, message);
+            log.debug("[WebSocketBroadcaster] Success to broadcast unread count. roomCode={}, unreadCount={}",
+                    roomCode, unreadCount);
         } catch (Exception e) {
-            log.debug("[WebSocketBroadcaster] Fail to broadcast unread count. expoId={}, roomCode={}, "
-                    + "unreadCount={}", expoId, roomCode, unreadCount);
+            log.debug("[WebSocketBroadcaster] Fail to broadcast unread count. roomCode={}, unreadCount={}",
+                    roomCode, unreadCount);
+        }
+    }
+
+    @Override
+    public void broadcastRoomPreviewUpdate(String roomCode, ChatMessage message) {
+        if (message == null) {
+            return;
+        }
+
+        ChatRoomPreviewPayload payload = new ChatRoomPreviewPayload(
+                roomCode,
+                message.getId(),
+                message.getContent(),
+                message.getSentAt(),
+                message.getSenderType()
+        );
+
+        WebSocketBaseMessage messagePacket = new WebSocketBaseMessage(
+                BroadcastType.ROOM_PREVIEW_UPDATE,
+                payload
+        );
+
+        try {
+            messagingTemplate.convertAndSend(WebSocketDestination.CHAT_ROOM_STATE, messagePacket);
+            log.debug("[WebSocketBroadcaster] Success to broadcast room preview. roomCode={}, messageId={}",
+                    roomCode, message.getId());
+        } catch (Exception e) {
+            log.debug("[WebSocketBroadcaster] Fail to broadcast room preview. roomCode={}, messageId={}",
+                    roomCode, message.getId());
         }
     }
 

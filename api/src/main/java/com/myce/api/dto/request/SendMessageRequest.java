@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SendMessageRequest {
-    private String roomId;
+    private String roomCode;
     private String content;
     private LocalDateTime sentAt;
 }

@@ -2,12 +2,13 @@ package com.myce.api.controller.websocket;
 
 import com.myce.api.controller.supporter.SessionUserInfoSupporter;
 import com.myce.api.dto.WebSocketUserInfo;
+import com.myce.api.dto.request.ChatRoomActionRequest;
 import com.myce.api.service.ChatRoomStateService;
-import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
@@ -24,12 +25,12 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/request-handoff")
     public ResponseEntity<Object> requestHandoff(
-            @PathParam("roomCode") String roomCode,
+            @Payload ChatRoomActionRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
-        chatRoomStateService.adminHandoff(userInfo, roomCode, sessionId);
+        chatRoomStateService.adminHandoff(userInfo, request.getRoomCode(), sessionId);
 
         return ResponseEntity.noContent().build();
     }
@@ -40,12 +41,12 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/cancel-handoff")
     public ResponseEntity<Object> cancelHandoff(
-            @PathParam("roomCode") String roomCode,
+            @Payload ChatRoomActionRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
-        chatRoomStateService.cancelHandoff(userInfo, roomCode, sessionId);
+        chatRoomStateService.cancelHandoff(userInfo, request.getRoomCode(), sessionId);
 
         return ResponseEntity.noContent().build();
     }
@@ -56,12 +57,12 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/proactive-intervention")
     public ResponseEntity<Object> proactiveIntervention(
-            @PathParam("roomCode") String roomCode,
+            @Payload ChatRoomActionRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
-        chatRoomStateService.adminPreIntervention(userInfo, roomCode, sessionId);
+        chatRoomStateService.adminPreIntervention(userInfo, request.getRoomCode(), sessionId);
 
         return ResponseEntity.noContent().build();
     }
@@ -72,12 +73,12 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/accept-handoff")
     public ResponseEntity<Object> acceptHandoff(
-            @PathParam("roomCode") String roomCode,
+            @Payload ChatRoomActionRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
-        chatRoomStateService.acceptHandoff(userInfo, roomCode, sessionId);
+        chatRoomStateService.acceptHandoff(userInfo, request.getRoomCode(), sessionId);
 
         return ResponseEntity.noContent().build();
     }
@@ -88,12 +89,12 @@ public class ChatRoomStateController {
      */
     @MessageMapping("/request-ai")
     public ResponseEntity<Object> requestAI(
-            @PathParam("roomCode") String roomCode,
+            @Payload ChatRoomActionRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
         WebSocketUserInfo userInfo = SessionUserInfoSupporter.getUserInfo(headerAccessor);
         String sessionId = headerAccessor.getSessionId();
-        chatRoomStateService.aiHandoff(userInfo, roomCode, sessionId);
+        chatRoomStateService.aiHandoff(userInfo, request.getRoomCode(), sessionId);
 
         return ResponseEntity.noContent().build();
     }

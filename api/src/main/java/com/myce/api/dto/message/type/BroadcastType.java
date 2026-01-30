@@ -27,6 +27,7 @@ public enum BroadcastType {
     ADMIN_RELEASED("담당자해제"),
     READ_STATUS_UPDATE("읽음 상태 변경"),
     UNREAD_COUNT_UPDATE("안읽음 개수 변경"),
+    ROOM_PREVIEW_UPDATE("채팅방 미리보기 변경"),
 
     ADMIN_ASSIGNMENT_UPDATE("admin_assignment_update"),
 

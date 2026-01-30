@@ -2,6 +2,7 @@ package com.myce.api.service;
 
 import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.common.dto.PageResponse;
+import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.type.MessageSenderType;
@@ -25,7 +26,7 @@ public interface ChatMessageService {
     /**
      * 특정 채팅방의 읽지 않은 메시지 수 조회 (역할 기반 접근 제어)
      */
-    Long getUnreadCount(String roomCode, Long memberId, String memberRole);
+    Long getUnreadCount(String roomCode, Long memberId, String memberRole, LoginType loginType);
 
     ChatMessage getRecentMessage(String roomCode);
 

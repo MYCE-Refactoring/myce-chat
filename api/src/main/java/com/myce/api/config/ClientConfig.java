@@ -19,10 +19,10 @@ public class ClientConfig {
     @Bean
     public RestClient restClient(
             RestClient.Builder lbRestClientBuilder,
-            @Value("${internal.core.url}") String coreUrl,
-            @Value("${internal.core.value}") String internalHeader) {
+            @Value("${internal.core.value}") String internalHeader
+    ) {
         return lbRestClientBuilder
-                .baseUrl(coreUrl)
+                .baseUrl("http://CORE-INTERNAL")
                 .defaultHeader(InternalHeaderKey.INTERNAL_AUTH, internalHeader)
                 .build();
     }

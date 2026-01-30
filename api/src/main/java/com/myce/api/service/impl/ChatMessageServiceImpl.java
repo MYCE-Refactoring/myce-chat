@@ -16,7 +16,6 @@ import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.MessageSenderType;
 import com.myce.domain.repository.ChatMessageCacheRepository;
 import com.myce.domain.repository.ChatMessageRepository;
-import com.myce.domain.repository.ChatRoomCacheRepository;
 import com.myce.domain.repository.ChatRoomRepository;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomAccessCheckService accessCheckService;
-    private final ChatRoomCacheRepository chatRoomCacheRepository;
     private final ChatMessageCacheRepository chatMessageCacheRepository;
     private final ChatMessageCreateComponent chatMessageCreateComponent;
 
@@ -109,10 +107,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 } else {
                     Map<String, Long> readStatus = chatRoom.getReadStatus();
                     for (ChatMessage chatMessage : chatMessages) {
-                        log.debug("@@@@@@@@ message check. messageSeq={}, isRead={}", chatMessage.getSeq(), chatMessage.getUnreadCount());
                         if (chatMessage.getUnreadCount() > 0 && unreadService.isReadMessage(chatMessage, readStatus)) {
                             chatMessage.decreaseUnreadCount();
-                            log.debug("@@@@@@@@@@@ decrease Unread message. messageSeq={}", chatMessage.getSeq());
                         }
                     }
                 }
@@ -139,9 +135,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
 
         List<ChatMessageResponse> chatMessageResponse = chatMessages.stream()
-            .map(message -> {
-                return ChatMessageMapper.toResponse(message);
-            })
+            .map(ChatMessageMapper::toResponse)
             .toList();
 
         log.debug("[ChatMessage] Success to get message. roomCode: {}, messageCount: {}, totalMessageCount: {}",

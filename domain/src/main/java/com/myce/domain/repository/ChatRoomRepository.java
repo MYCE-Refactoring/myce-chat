@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 /**
  * 채팅방 MongoDB Repository
- * 
  * 주요 기능:
  * 1. 사용자별 채팅방 목록 조회 (권한 기반)
  * 2. 박람회별 채팅방 조회 (관리자용)
@@ -21,7 +20,7 @@ public interface ChatRoomRepository extends MongoRepository<ChatRoom, String> {
     /**
      * 채팅방 코드로 단일 채팅방 조회
      */
-    public Optional<ChatRoom> findByRoomCode(String roomCode);
+    Optional<ChatRoom> findByRoomCode(String roomCode);
 
     /**
      * 특정 회원이 참여한 활성화된 채팅방 목록 조회 (사용자용)

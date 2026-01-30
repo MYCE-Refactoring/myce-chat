@@ -14,7 +14,7 @@ public class JoinRoomRequest {
     private String roomCode;  // "admin-{expoId}-{userId}" 형식
     
     @Builder
-    public JoinRoomRequest(String roomId) {
-        this.roomCode = roomId;
+    public JoinRoomRequest(String roomCode) {
+        this.roomCode = roomCode;
     }
 }

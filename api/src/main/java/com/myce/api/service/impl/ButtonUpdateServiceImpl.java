@@ -15,6 +15,7 @@ import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.ChatRoomState;
 import com.myce.domain.repository.ChatRoomRepository;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

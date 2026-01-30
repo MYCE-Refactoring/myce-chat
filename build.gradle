@@ -15,8 +15,8 @@ subprojects {
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
 
-    group = 'com-myce-chat'
-    version = '0.0.1-SNAPSHOT'
+    group = 'com-myce'
+    version = '0.0.1'
 
     java {
         toolchain {

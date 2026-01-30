@@ -51,7 +51,7 @@ public class SecurityConfig {
 //        }));
 
         http.authorizeHttpRequests(auth ->
-                auth.requestMatchers("/ws/**").permitAll()
+                auth.requestMatchers("/ws/**", "/actuator/**").permitAll()
                         .anyRequest().authenticated());
 
         return http.build();

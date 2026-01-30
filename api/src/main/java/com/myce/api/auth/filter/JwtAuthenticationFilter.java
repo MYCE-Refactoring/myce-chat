@@ -1,6 +1,5 @@
 package com.myce.api.auth.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myce.api.auth.dto.CustomUserDetails;
 import com.myce.common.type.LoginType;
 import jakarta.servlet.FilterChain;
@@ -8,7 +7,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,7 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/ws/");
+        return path.startsWith("/ws/") || path.startsWith("/actuator/");
     }
 
     @Override
@@ -80,5 +78,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 다음 필터로
         filterChain.doFilter(request, response);
     }
-
 }

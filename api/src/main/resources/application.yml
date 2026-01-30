@@ -45,3 +45,13 @@ logging:
     org.springframework: info
     com.myce: debug
     org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true

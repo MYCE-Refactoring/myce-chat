@@ -7,7 +7,7 @@ public final class WebSocketDestination {
     public static final String ADMIN_HANDOFF_NOTIFICATION = "/topic/platform/admin-updates";
     private static final String SEND_CHAT_MESSAGE_FORMAT = "/topic/chat/%s";
     private static final String ADMIN_UPDATE_STATE = "/topic/expo/%s/admin-updates";
-    private static final String CHAT_ROOM_STATE = "/topic/expo/%s/chat-room-updates";
+    public static final String CHAT_ROOM_STATE = "/topic/chat-room-updates";
 
     public static final String ERROR = "/queue/errors";
 
@@ -19,7 +19,4 @@ public final class WebSocketDestination {
         return String.format(ADMIN_UPDATE_STATE, expoId);
     }
 
-    public static String getChatRoomStateUpdateDestination(Long expoId) {
-        return String.format(CHAT_ROOM_STATE, expoId);
-    }
 }

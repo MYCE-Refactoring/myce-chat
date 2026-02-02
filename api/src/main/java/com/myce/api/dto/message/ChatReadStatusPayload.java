@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class ChatReadStatusPayload {
-    private String messageId;
+    private Long seq;
     private Long readBy;
     private MessageReaderType messageReaderType;
     private LocalDateTime timestamp;

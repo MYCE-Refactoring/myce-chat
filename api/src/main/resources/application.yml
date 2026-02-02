@@ -30,14 +30,6 @@ internal:
     url: lb://CORE-INTERNAL
     value: ${INTERNAL_AUTH_VALUE}
 
-eureka:
-  client:
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: ${EUREKA_URL}
-  instance:
-    prefer-ip-address: true
 
 scheduler:
   admin-timeout: 0 */30 * * * *
@@ -46,6 +38,16 @@ logging:
     org.springframework: info
     com.myce: debug
     org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_URL}
+  instance:
+    prefer-ip-address: true
 
 management:
   endpoints:

@@ -165,10 +165,6 @@ public class ChatMessageCacheRepositoryImpl implements ChatMessageCacheRepositor
         }
     }
 
-    /**
-     * 미읽음 카운트 조회
-     * 채팅방 목록 표시 시 사용
-     */
     @Override
     public Long getUnreadCount(String roomCode, Long memberId) {
         log.trace("[ChatMessageCache] Get unread count. roomCode={}, memberId={}", roomCode, memberId);
@@ -187,44 +183,44 @@ public class ChatMessageCacheRepositoryImpl implements ChatMessageCacheRepositor
     }
 
     /**
-     * 마지막 읽은 메시지 ID 저장
+     * 마지막 읽은 메시지 seq 저장
      * 읽음 상태 추적용
      */
     @Override
-    public void setLastReadMessageId(String roomCode, Long memberId, String messageId) {
-        log.trace("[ChatMessageCache] Caching last read message. roomCode={}, memberId={}, messageId={}",
-                roomCode, memberId, messageId);
+    public void setLastReadSeq(String roomCode, Long memberId, Long messageSeq) {
+        log.trace("[ChatMessageCache] Caching last read seq. roomCode={}, memberId={}, seq={}",
+                roomCode, memberId, messageSeq);
 
         try {
             String key = String.format(ChatRoomKey.ROOM_LAST_READ_KEY_FORMAT, roomCode, memberId);
-            redisTemplate.opsForValue().set(key, messageId, CACHE_TTL);
+            redisTemplate.opsForValue().set(key, messageSeq, CACHE_TTL);
 
-            log.debug("[ChatMessageCache] Success to cache last read message. roomCode={}, memberId={}, messageId={}",
-                    roomCode, memberId, messageId);
+            log.debug("[ChatMessageCache] Success to cache last read seq. roomCode={}, memberId={}, seq={}",
+                    roomCode, memberId, messageSeq);
 
         } catch (Exception e) {
-            log.debug("[ChatMessageCache] Fail to cache last read message. roomCode={}, memberId={}, messageId={}",
-                    roomCode, memberId, messageId);
+            log.debug("[ChatMessageCache] Fail to cache last read seq. roomCode={}, memberId={}, seq={}",
+                    roomCode, memberId, messageSeq);
         }
     }
 
     /**
-     * 마지막 읽은 메시지 ID 조회
+     * 마지막 읽은 메시지 seq 조회
      */
     @Override
-    public String getLastReadMessageId(String roomCode, Long memberId) {
-        log.trace("[ChatMessageCache] Get cache last read message. roomCode={}, memberId={}",
+    public Long getLastReadSeq(String roomCode, Long memberId) {
+        log.trace("[ChatMessageCache] Get cache last read seq. roomCode={}, memberId={}",
                 roomCode, memberId);
         try {
             String key = String.format(ChatRoomKey.ROOM_LAST_READ_KEY_FORMAT, roomCode, memberId);
             Object value = redisTemplate.opsForValue().get(key);
 
-            log.debug("[ChatMessageCache] Success to get cache last read message. "
-                            + "roomCode={}, memberId={}, lastReadMessage={}", roomCode, memberId, value);
+            log.debug("[ChatMessageCache] Success to get cache last read seq. "
+                            + "roomCode={}, memberId={}, lastReadSeq={}", roomCode, memberId, value);
 
-            return value != null ? value.toString() : null;
+            return value != null ? Long.parseLong(value.toString()) : null;
         } catch (Exception e) {
-            log.debug("[ChatMessageCache] Fail to get cache last read message. "
+            log.debug("[ChatMessageCache] Fail to get cache last read seq. "
                     + "roomCode={}, memberId={}", roomCode, memberId);
             return null;
         }

@@ -9,15 +9,16 @@ import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.dto.PageResponse;
 import com.myce.common.exception.CustomErrorCode;
 import com.myce.common.exception.CustomException;
+import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.ChatRoom;
 import com.myce.domain.document.type.MessageSenderType;
 import com.myce.domain.repository.ChatMessageCacheRepository;
 import com.myce.domain.repository.ChatMessageRepository;
-import com.myce.domain.repository.ChatRoomCacheRepository;
 import com.myce.domain.repository.ChatRoomRepository;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,10 +40,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomAccessCheckService accessCheckService;
-    private final ChatRoomCacheRepository chatRoomCacheRepository;
     private final ChatMessageCacheRepository chatMessageCacheRepository;
     private final ChatMessageCreateComponent chatMessageCreateComponent;
-
 
     private static final int MAX_PAGE_SIZE = 1000;
 
@@ -89,26 +88,40 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 roomCode, page, size, memberId, role);
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
 
-        ChatRoom chatRoom = getChatRoom(roomCode);
+        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new CustomException(CustomErrorCode.EXPO_NOT_EXIST));
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        List<ChatMessage> chateMesages = null;
+        List<ChatMessage> chatMessages = null;
         int pageNumber = 1;
         int pageSize = size;
         long totalElements = size;
         int totalPage = 1;
         // Redis 캐시 확인
         if (page == 0 && size <= 50) {
-            chateMesages = chatMessageCacheRepository.getCachedRecentMessages(roomCode, size);
+            chatMessages = chatMessageCacheRepository.getCachedRecentMessages(roomCode, size);
+            if (chatMessages != null && !chatMessages.isEmpty()) {
+                if (chatMessages.size() < size) {
+                    // 캐시가 부족하면 DB에서 다시 조회 (스크롤/hasMore 오류 방지)
+                    chatMessages = null;
+                } else {
+                    Map<String, Long> readStatus = chatRoom.getReadStatus();
+                    for (ChatMessage chatMessage : chatMessages) {
+                        if (chatMessage.getUnreadCount() > 0 && unreadService.isReadMessage(chatMessage, readStatus)) {
+                            chatMessage.decreaseUnreadCount();
+                        }
+                    }
+                }
+            }
         }
 
-        if (chateMesages == null || chateMesages.isEmpty()) {
+        if (chatMessages == null || chatMessages.isEmpty()) {
             // 캐시 미스 또는 첫 페이지가 아닌 경우 - MongoDB 조회
             log.debug("[ChatMessage] Cache miss or not first page for get message. roomCode={}", roomCode);
             Pageable pageable = PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE));
             Page<ChatMessage> messagePage = chatMessageRepository.findByRoomCodeOrderBySentAtDesc(roomCode, pageable);
 
-            chateMesages = messagePage.getContent();
+            chatMessages = messagePage.getContent();
             if (pageable.getPageNumber() == 0 && !messagePage.getContent().isEmpty()) {
                 chatMessageCacheRepository.cacheRecentMessages(roomCode, messagePage.getContent());
                 log.debug("[ChatMessage] Cached messages. roomCode={}, size={}",
@@ -121,12 +134,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             totalPage = messagePage.getTotalPages();
         }
 
-        List<ChatMessageResponse> chatMessageResponse = chateMesages.stream()
-            .map(message -> {
-                // 최적화된 메서드 사용 - ChatRoom을 재사용하여 MongoDB 조회 제거
-                int isRead = unreadService.isReadMessage(message, chatRoom.getReadStatus());
-                return ChatMessageMapper.toResponse(message, isRead);
-            })
+        List<ChatMessageResponse> chatMessageResponse = chatMessages.stream()
+            .map(ChatMessageMapper::toResponse)
             .toList();
 
         log.debug("[ChatMessage] Success to get message. roomCode: {}, messageCount: {}, totalMessageCount: {}",
@@ -146,31 +155,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * 읽지 않은 메시지 수 조회
      */
     @Override
-    public Long getUnreadCount(String roomCode, Long memberId, String memberRole) {
+    public Long getUnreadCount(String roomCode, Long memberId, String memberRole, LoginType loginType) {
         // 권한 검증
         Role role = Role.fromName(memberRole);
-        ChatRoom chatRoom = getChatRoom(roomCode);
+        ChatRoom chatRoom = chatRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new CustomException(CustomErrorCode.EXPO_NOT_EXIST));
         boolean isPlatformRoom = RoomCodeSupporter.isPlatformRoom(roomCode);
         accessCheckService.validateAccess(isPlatformRoom, chatRoom.getMemberId(), chatRoom.getExpoId(), memberId, role);
 
-        return unreadService.getUnreadCountForViewer(roomCode, chatRoom.getReadStatus(), memberId, role);
-    }
-
-    private ChatRoom getChatRoom(String roomCode) {
-        // long chatRoomStartTime = System.currentTimeMillis();
-
-        ChatRoom chatRoom = chatRoomCacheRepository.getCachedChatRoom(roomCode);
-        if (chatRoom == null) {
-            // 캐시 미스 시 DB 조회 후 캐싱
-            chatRoom = chatRoomRepository.findByRoomCode(roomCode)
-                    .orElseThrow(() -> new CustomException(CustomErrorCode.EXPO_NOT_EXIST));
-
-            chatRoomCacheRepository.cacheChatRoom(roomCode, chatRoom);
-        }
-
-        //        long chatRoomEndTime = System.currentTimeMillis();
-//        log.debug(" Redis 경로 ChatRoom 조회 시간: {}ms - roomCode: {}", (chatRoomEndTime - chatRoomStartTime), roomCode);
-
-        return chatRoom;
+        return unreadService.getUnreadCount(roomCode, chatRoom.getReadStatus(), memberId, role, loginType);
     }
 }

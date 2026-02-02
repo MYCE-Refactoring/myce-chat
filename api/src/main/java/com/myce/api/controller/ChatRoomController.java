@@ -35,7 +35,10 @@ public class ChatRoomController {
         log.info("[Request] Get chat rooms. memberId={}, role={}", memberId, role);
 
         ChatRoomInfoListResponse response = chatRoomService.getChatRooms(
-                memberId, customUserDetails.getUsername(), role
+                memberId,
+                customUserDetails.getUsername(),
+                role,
+                customUserDetails.getLoginType()
         );
 
         log.info("[Response] Get chat rooms. memberId={}, count={}", memberId, response.getChatRooms().size());
@@ -46,10 +49,11 @@ public class ChatRoomController {
     @GetMapping("/platform")
     public ResponseEntity<ChatRoomInfoListResponse> getPlatformChatRooms(
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-        ChatRoomInfoListResponse response = chatRoomService.getChatRooms(
+        ChatRoomInfoListResponse response = chatRoomService.getPlatformChatRooms(
                 customUserDetails.getMemberId(),
                 customUserDetails.getUsername(),
-                customUserDetails.getRole()
+                customUserDetails.getRole(),
+                customUserDetails.getLoginType()
         );
 
         return ResponseEntity.ok(response);
@@ -66,7 +70,7 @@ public class ChatRoomController {
         log.info("[Request] Get chat rooms by expo. expoId={}, memberId={}", expoId, memberId);
 
         ChatRoomInfoListResponse response = chatRoomService
-                .getChatRoomsByExpo(expoId, customUserDetails.getMemberId());
+                .getChatRoomsByExpo(expoId, customUserDetails.getMemberId(), customUserDetails.getLoginType());
 
         log.info("[Response] Get chat rooms by expo. expoId={}, memberId={}", expoId, memberId);
         return ResponseEntity.ok(response);

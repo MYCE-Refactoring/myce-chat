@@ -1,14 +1,11 @@
 package com.myce.api.service;
 
-import com.myce.api.auth.dto.CustomUserDetails;
 import com.myce.api.dto.response.ChatMessageResponse;
 import com.myce.api.dto.response.ChatRoomInfoListResponse;
 import com.myce.api.dto.response.ChatRoomInfoResponse;
 import com.myce.api.dto.response.ChatUnreadCountResponse;
 import com.myce.common.dto.PageResponse;
 import com.myce.common.type.LoginType;
-import java.awt.print.Pageable;
-import java.util.Map;
 
 /**
  * 박람회 관리자 채팅 서비스 인터페이스
@@ -28,7 +25,7 @@ public interface ExpoChatService {
     /**
      * 안읽은 메시지 수 조회
      */
-    Long getUnreadCount(Long expoId, String roomCode, Long memberId);
+    Long getUnreadCount(Long expoId, String roomCode, Long memberId, LoginType loginType);
     
     /**
      * 사용자용 전체 읽지 않은 메시지 수 조회 (FAB용)

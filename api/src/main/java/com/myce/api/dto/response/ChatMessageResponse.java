@@ -15,6 +15,7 @@ public class ChatMessageResponse {
     
     private String roomCode;
     private String messageId;
+    private Long seq;
     private Long senderId;
     private MessageSenderType senderType;
     private String senderName; // 발신자 이름 (모든 메시지 타입에 사용)
@@ -25,11 +26,12 @@ public class ChatMessageResponse {
     private Integer unreadCount; // 카카오톡 스타일 읽지 않은 수 (0이면 읽음, 1이면 안읽음)
     
     @Builder
-    public ChatMessageResponse(String roomCode, String messageId, Long senderId, MessageSenderType senderType,
+    public ChatMessageResponse(String roomCode, String messageId, Long seq, Long senderId, MessageSenderType senderType,
                           String senderName, String adminCode, String adminDisplayName, String content, 
                           LocalDateTime sentAt, Integer unreadCount) {
         this.roomCode = roomCode;
         this.messageId = messageId;
+        this.seq = seq;
         this.senderId = senderId;
         this.senderType = senderType;
         this.senderName = senderName;

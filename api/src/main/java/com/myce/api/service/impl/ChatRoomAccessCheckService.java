@@ -1,7 +1,6 @@
 package com.myce.api.service.impl;
 
 import com.myce.api.service.client.ExpoClient;
-import com.myce.api.util.RoomCodeSupporter;
 import com.myce.common.exception.CustomErrorCode;
 import com.myce.common.exception.CustomException;
 import com.myce.common.type.LoginType;
@@ -67,6 +66,13 @@ public class ChatRoomAccessCheckService {
     private boolean isValidExpoChatAccess(Long expoId, Long chatRoomMemberId, Long memberId, Role role) {
         log.debug("[AccessCheck] validate expo chat permission. expoId={}, memberId={}, role={}",
                 expoId, memberId, role);
+
+        // 일반 사용자: 본인이 생성한 채팅방만 접근 가능
+        if (chatRoomMemberId.equals(memberId)) {
+            log.debug("[AccessCheck] Validate expo chat permission. expoId={}, memberId={}, isValid={}",
+                    expoId, memberId, true);
+        }
+
         if (Role.EXPO_ADMIN.equals(role)) {
             // EXPO_ADMIN: AdminCode 권한 확인
             boolean isOwner = expoClient.checkMemberExpoOwner(expoId, memberId);
@@ -76,8 +82,7 @@ public class ChatRoomAccessCheckService {
             return isAdmin || isOwner || chatRoomMemberId.equals(memberId);
         }
 
-        // 일반 사용자: 본인이 생성한 채팅방만 접근 가능
-        return chatRoomMemberId.equals(memberId);
+        return false;
     }
 
     /**

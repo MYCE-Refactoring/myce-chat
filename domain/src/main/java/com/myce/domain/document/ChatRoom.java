@@ -85,7 +85,7 @@ public class ChatRoom {
     /**
      * 각 사용자별 마지막 읽은 메시지 정보 (JSON 형태)
      */
-    private Map<String, String> readStatus;
+    private Map<String, Long> readStatus;
 
     /**
      * 채팅방 생성 시간
@@ -260,12 +260,14 @@ public class ChatRoom {
     /**
      * 읽음 상태 업데이트
      */
-    public void updateReadStatus(String member, String messageId) {
-        this.readStatus.put(member, messageId);
+    public void updateReadStatus(String member, Long messageSeq) {
+        if (readStatus == null) readStatus = new HashMap<>();
+
+        this.readStatus.put(member, messageSeq);
         this.updatedAt = LocalDateTime.now();
     }
 
-    public String getCurrentReadStatus(String member) {
+    public Long getCurrentReadStatus(String member) {
         return readStatus.get(member);
     }
     

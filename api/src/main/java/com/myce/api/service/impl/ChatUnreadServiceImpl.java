@@ -2,7 +2,9 @@ package com.myce.api.service.impl;
 
 import com.myce.api.dto.message.type.MessageReaderType;
 import com.myce.api.service.ChatUnreadService;
+import com.myce.api.util.ChatMessageTypeUtil;
 import com.myce.api.util.RoomCodeSupporter;
+import com.myce.common.type.LoginType;
 import com.myce.common.type.Role;
 import com.myce.domain.document.ChatMessage;
 import com.myce.domain.document.type.MessageSenderType;
@@ -26,98 +28,62 @@ public class ChatUnreadServiceImpl implements ChatUnreadService {
     private final ChatMessageRepository chatMessageRepository;
     
     @Override
-    public long getUnreadCountForViewer(String roomCode,
-            Map<String, String> readStatus, Long viewerId, Role viewerRole) {
-        log.trace("Start to calculate unread count. roomCode={}, viewerId={}, viewerRole={}",
-                roomCode, viewerId, viewerRole);
+    public long getUnreadCount(
+            String roomCode,
+            Map<String, Long> readStatus,
+            Long memberId,
+            Role role,
+            LoginType loginType
+    ) {
+        log.debug("[UnreadService] Start to calculate unread count. roomCode={}, readStatus={} memberId={}, "
+                        + "role={}", roomCode, readStatus, memberId, role);
 
-        String readerType = viewerRole.equals(Role.EXPO_ADMIN) || viewerRole.equals(Role.PLATFORM_ADMIN) ?
-                MessageReaderType.ADMIN.name() : MessageReaderType.USER.name();
-        String lastReadMessageId = readStatus.get(readerType);
+        MessageReaderType readerType = ChatMessageTypeUtil.getReaderType(roomCode, memberId, role, loginType);
 
-        log.trace("Current read status. userType: {}, lastReadId: {}", readerType, lastReadMessageId);
-            
-        String targetSenderType = determineTargetSenderType(viewerRole);
-        long unreadCount = getUnreadCount(roomCode, lastReadMessageId, targetSenderType);
+        String targetSenderType = ChatMessageTypeUtil
+                .getCounterpartSenderType(roomCode, memberId, role, loginType)
+                .name();
+        if (readStatus == null || !readStatus.containsKey(readerType.name())) {
+            return chatMessageRepository.countByRoomCodeAndSenderType(roomCode, targetSenderType);
+        }
 
-        log.debug("Success to get unread count for room. roomCode={}, viewerId={}, viewerRole={}",
-                roomCode, viewerId, viewerRole);
-        return unreadCount;
+        Long lastReadSeq = readStatus.get(readerType.name());
+        if (lastReadSeq == null) {
+            return chatMessageRepository.countByRoomCodeAndSenderType(roomCode, targetSenderType);
+        }
+
+        return chatMessageRepository.countByRoomCodeAndSenderTypeAndSeqGreaterThan(
+                roomCode, targetSenderType, lastReadSeq);
     }
 
-    public int isReadMessage(ChatMessage message, Map<String, String> readStatus) {
-        String messageId = message.getId();
+    public boolean isReadMessage(ChatMessage message, Map<String, Long> readStatus) {
+        Long messageSeq = message.getSeq();
+        log.debug("[ChatRead] Check read message. messageSeq={}, readStatus{}", messageSeq, readStatus);
 
-        log.trace("[ChatRead] Check read message. messageId={}, readStatus{}", message, readStatus);
-
-        // 메시지 발송자에 따라 상대방의 읽음 상태 확인
-        MessageSenderType senderType = message.getSenderType();
-        String readerType = getReaderType(senderType);
-        String lastReadMessageId = readStatus.get(readerType);
-
-        boolean isRead = lastReadMessageId != null && messageId.compareTo(lastReadMessageId) <= 0;
+        if (readStatus == null) return false;
 
         String roomCode = message.getRoomCode();
+        MessageSenderType senderType = message.getSenderType();
+        boolean isRead = isReadBySenderType(messageSeq, readStatus, senderType);
+
         if (!isRead && RoomCodeSupporter.isPlatformRoom(roomCode)) {
-            lastReadMessageId = readStatus.get(MessageReaderType.AI.name());
-            isRead = lastReadMessageId != null && messageId.compareTo(lastReadMessageId) <= 0;
+            Long aiLastReadSeq = readStatus.get(MessageReaderType.AI.name());
+            if (aiLastReadSeq != null) isRead = isBeforeMessage(messageSeq, aiLastReadSeq);
         }
 
-        log.trace("[ChatRead] Check read message. messageId={}, isRead={}", message, isRead);
-        return isRead ? 0 : 1;
+        log.debug("[ChatRead] Check read message. messageSeq={}, isRead={}", messageSeq, isRead);
+        return isRead;
     }
 
-    private String getReaderType(MessageSenderType senderType) {
-        if (MessageSenderType.ADMIN.equals(senderType) ||
-                MessageSenderType.AI.equals(senderType)) return MessageReaderType.USER.name();
+    private boolean isReadBySenderType(Long messageSeq, Map<String, Long> readStatus, MessageSenderType senderType) {
+        String readerType = ChatMessageTypeUtil.getReaderTypeBySender(senderType).name();
+        Long lastReadSeq = readStatus.get(readerType);
+        if (lastReadSeq != null) return isBeforeMessage(messageSeq, lastReadSeq);
 
-        return MessageReaderType.ADMIN.name();
+        return false;
     }
 
-    /**
-     * 메시지 발송자 타입에 따라 읽음 상태를 확인할 상대방 타입 결정
-     */
-    private String determineReaderType(MessageSenderType messageSenderType) {
-        if (MessageSenderType.SYSTEM.equals(messageSenderType)) {
-            return null; // 시스템 메시지는 읽음 처리 안함
-        }
-        
-        if (MessageSenderType.USER.equals(messageSenderType)) {
-            // USER가 보낸 메시지 → ADMIN이 읽어야 함
-            return "ADMIN";
-        } else if (MessageSenderType.ADMIN.equals(messageSenderType) || MessageSenderType.AI.equals(messageSenderType)) {
-            // ADMIN/AI가 보낸 메시지 → USER가 읽어야 함
-            return "USER";
-        }
-        
-        return null;
-    }
-
-    /**
-     * 내 역할에 따라 내가 읽어야 할 메시지의 발송자 타입 결정
-     */
-    private String determineTargetSenderType(Role viewerRole) {
-//        boolean isPlatformRoom = chatRoom.getExpoId() == null;
-
-        if (Role.USER.equals(viewerRole)) {
-            // 일반 사용자는 ADMIN/AI 메시지를 읽어야 함
-            // 플랫폼 채팅방에서는 AI 또는 ADMIN 메시지 (둘 중 하나라도 있으면)
-            // 일단 ADMIN으로 통일 (AI 메시지도 ADMIN 타입으로 저장되는 경우 많음)
-            return MessageSenderType.ADMIN.name();
-        } else {
-            // 관리자는 USER 메시지를 읽어야 함
-            return MessageSenderType.USER.name();
-        }
-    }
-
-    private long getUnreadCount(String roomCode, String lastReadMessageId, String targetSenderType) {
-        if (lastReadMessageId == null || lastReadMessageId.isEmpty()) {
-            // 아직 아무것도 읽지 않았다면 전체 상대방 메시지 개수
-            return chatMessageRepository.countByRoomCodeAndSenderType(roomCode, targetSenderType);
-        } else {
-            // 마지막 읽은 메시지 이후의 상대방 메시지 개수
-            return chatMessageRepository.countByRoomCodeAndSenderTypeAndIdGreaterThan(
-                    roomCode, targetSenderType, lastReadMessageId);
-        }
+    private boolean isBeforeMessage(Long currentMessageSeq, Long lastReadSeq) {
+        return currentMessageSeq != null && lastReadSeq != null && currentMessageSeq <= lastReadSeq;
     }
 }

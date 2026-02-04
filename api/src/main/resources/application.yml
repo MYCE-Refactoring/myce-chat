@@ -6,16 +6,17 @@ spring:
     name: chat-api
   config:
     import:
-      - optional:classpath:application-domain.yml
-      - optional:file:./.env[.properties]
-      - optional:file:../.env[.properties]
+#      - optional:classpath:application-domain.yml
+#      - optional:classpath:../application-domain.yml
+      - optional:aws-parameterstore:/myce/common/
+      - optional:aws-parameterstore:/myce/${spring.profiles.active}/
   # AI Configuration
   ai:
     bedrock:
       aws:
-        region: ${AWS_REGION:ap-northeast-2}
-        access-key: ${AWS_ACCESS_KEY_ID:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${BEDROCK_AWS_REGION:ap-northeast-2}
+        access-key: ${BEDROCK_AWS_ACCESS_KEY_ID:}
+        secret-key: ${BEDROCK_AWS_SECRET_ACCESS_KEY:}
       converse:
         chat:
           options:

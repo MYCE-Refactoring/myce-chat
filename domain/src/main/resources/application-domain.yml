@@ -1,0 +1,8 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+    redis:
+      url: ${REDIS_URL}
+      repositories:
+        enabled: false

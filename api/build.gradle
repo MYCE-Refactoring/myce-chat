@@ -1,7 +1,4 @@
 dependencies {
-	// Spring AI BOM - use M6 (latest with Bedrock Converse support)
-	implementation platform('org.springframework.ai:spring-ai-bom:1.0.0-M6')
-
 	implementation project(':domain')
 	implementation project(':common')
 	implementation 'org.springframework:spring-tx'
@@ -10,12 +7,13 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 
-
+	// Spring AI - Bedrock Converse
 	implementation 'org.springframework.ai:spring-ai-bedrock-converse-spring-boot-starter'
-	implementation 'org.springframework.ai:spring-ai-core'  // Required for ChatClient
+	implementation 'org.springframework.ai:spring-ai-core'
 
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }

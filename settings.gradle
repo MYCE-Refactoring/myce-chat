@@ -1,4 +1,4 @@
 rootProject.name = 'myce-chat'
 include 'api', 'common', 'domain'
 
-project(':api').name = 'myce-core-api'
+project(':api').name = 'myce-chat'

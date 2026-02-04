@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: ${MONGO_URL}
+      uri: ${MONGODB_URI}
     redis:
       url: ${REDIS_URL}
       repositories:

@@ -18,5 +18,5 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
-bootJar { enabled = false }
+bootJar { enabled = true }
 jar { enabled = true }

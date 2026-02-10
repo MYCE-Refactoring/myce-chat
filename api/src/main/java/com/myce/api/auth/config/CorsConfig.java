@@ -1,6 +1,5 @@
 package com.myce.api.auth.config;
 
-import com.myce.auth.security.util.JwtUtil;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +25,6 @@ public class CorsConfig {
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
         corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.setExposedHeaders(List.of(JwtUtil.AUTHORIZATION_HEADER));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);

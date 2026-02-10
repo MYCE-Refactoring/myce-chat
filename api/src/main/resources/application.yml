@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: chat-api
+  profiles:
+    include:
+      - domain
   config:
     import:
 #      - optional:classpath:application-domain.yml

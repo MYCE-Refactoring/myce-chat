@@ -16,7 +16,9 @@ public class CorsConfig {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOrigins(List.of(
                 "https://www.myce.cloud",
+                "https://www.api.myce.cloud",
                 "https://myce.cloud",
+                "https://api.myce.cloud",
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:8080",

@@ -49,6 +49,7 @@ eureka:
       defaultZone: ${EUREKA_URL}
   instance:
     prefer-ip-address: true
+    ip-address: ${CHAT_API_URL}
 
 management:
   endpoints:
